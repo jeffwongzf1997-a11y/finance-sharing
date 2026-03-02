@@ -1,0 +1,1959 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>有了Cursor，SQL、Python比IFRS、US-GAAP简单多了</title>
+<style>
+  :root { --primary: #2563eb; --accent: #f59e0b; --success: #10b981; --danger: #ef4444; --bg: #f8fafc; --card: #ffffff; --text: #1e293b; --muted: #64748b; --border: #e2e8f0; }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif; background: var(--bg); color: var(--text); line-height: 1.7; scroll-behavior: smooth; }
+  .container { max-width: 960px; margin: 0 auto; padding: 20px 20px 20px 20px; }
+
+  /* Progress bar */
+  #progress-bar { position: fixed; top: 0; left: 0; height: 3px; background: linear-gradient(90deg, var(--primary), var(--accent)); z-index: 9999; transition: width 0.1s; width: 0%; }
+
+  /* Sidebar nav */
+  .side-nav { position: fixed; left: 0; top: 0; bottom: 0; width: 180px; background: #fff; border-right: 1px solid var(--border); z-index: 999; padding: 20px 0; overflow-y: auto; display: flex; flex-direction: column; gap: 0; box-shadow: 2px 0 8px rgba(0,0,0,0.04); }
+  .side-nav a { display: block; padding: 8px 16px; font-size: 0.78em; color: var(--muted); text-decoration: none; border-left: 3px solid transparent; transition: all 0.2s; line-height: 1.4; }
+  .side-nav a:hover { color: var(--primary); background: #f0f5ff; }
+  .side-nav a.active { color: var(--primary); font-weight: 600; border-left-color: var(--primary); background: #eff6ff; }
+  .side-nav .side-tip { display: inline; }
+  .side-nav .nav-title { padding: 12px 16px 8px; font-size: 0.72em; font-weight: 700; color: var(--text); text-transform: uppercase; letter-spacing: 0.5px; }
+
+  /* Back to top */
+  #back-top { position: fixed; right: 24px; bottom: 32px; width: 42px; height: 42px; border-radius: 50%; background: var(--primary); color: white; border: none; cursor: pointer; font-size: 1.3em; display: none; align-items: center; justify-content: center; box-shadow: 0 2px 10px rgba(0,0,0,0.15); z-index: 999; transition: opacity 0.25s, transform 0.25s; }
+  #back-top:hover { transform: scale(1.1); }
+  
+  /* Header */
+  .hero { background: linear-gradient(135deg, #1e3a5f 0%, #2563eb 100%); color: white; padding: 60px 40px; border-radius: 16px; margin-bottom: 40px; text-align: center; }
+  .hero h1 { font-size: 2.2em; margin-bottom: 12px; }
+  .hero .subtitle { font-size: 1.1em; opacity: 0.9; }
+  .hero .meta { margin-top: 20px; font-size: 0.9em; opacity: 0.7; }
+
+  /* Section */
+  .section { margin-bottom: 48px; }
+  .section-header { display: flex; align-items: center; gap: 12px; margin-bottom: 24px; padding-bottom: 12px; border-bottom: 2px solid var(--primary); }
+  .section-header .num { background: var(--primary); color: white; width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 1.1em; flex-shrink: 0; }
+  .section-header h2 { font-size: 1.5em; color: var(--primary); }
+
+  /* Phase */
+  .phase { background: var(--card); border-radius: 12px; padding: 28px; margin-bottom: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); border-left: 4px solid var(--primary); }
+  .phase.mid { border-left-color: var(--accent); }
+  .phase.post { border-left-color: var(--success); }
+  .phase h3 { font-size: 1.25em; margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
+  .phase h4 { font-size: 1.05em; margin: 20px 0 12px 0; color: var(--text); padding-bottom: 6px; border-bottom: 1px dashed var(--border); }
+
+  /* Badge */
+  .badge { display: inline-block; padding: 2px 10px; border-radius: 12px; font-size: 0.75em; font-weight: 600; }
+  .badge-blue { background: #dbeafe; color: #1d4ed8; }
+  .badge-amber { background: #fef3c7; color: #b45309; }
+  .badge-green { background: #d1fae5; color: #047857; }
+  .badge-red { background: #fee2e2; color: #b91c1c; }
+  .badge-purple { background: #ede9fe; color: #6d28d9; }
+
+  /* Timeline */
+  .timeline { display: flex; justify-content: center; gap: 0; margin: 30px 0; flex-wrap: wrap; }
+  .timeline-item { text-align: center; padding: 16px 24px; position: relative; flex: 1; min-width: 180px; }
+  .timeline-item .dot { width: 48px; height: 48px; border-radius: 50%; margin: 0 auto 10px; display: flex; align-items: center; justify-content: center; font-size: 1.4em; }
+  .timeline-item:not(:last-child)::after { content: "→"; position: absolute; right: -8px; top: 28px; font-size: 1.4em; color: var(--muted); }
+  .t-pre .dot { background: #dbeafe; }
+  .t-mid .dot { background: #fef3c7; }
+  .t-post .dot { background: #d1fae5; }
+
+  /* Chat simulation */
+  .chat { background: #f1f5f9; border-radius: 12px; padding: 20px; margin: 16px 0; }
+  .chat-msg { margin-bottom: 14px; display: flex; gap: 10px; align-items: flex-start; }
+  .chat-msg:last-child { margin-bottom: 0; }
+  .chat-avatar { width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.8em; flex-shrink: 0; color: white; font-weight: bold; }
+  .chat-avatar.user { background: var(--primary); }
+  .chat-avatar.ai { background: var(--success); }
+  .chat-bubble { background: white; border-radius: 10px; padding: 12px 16px; max-width: 85%; font-size: 0.92em; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
+  .chat-bubble.user-bubble { background: #dbeafe; }
+  .chat-label { font-size: 0.75em; color: var(--muted); margin-bottom: 4px; }
+
+  /* Code block */
+  pre { background: #1e293b; color: #e2e8f0; padding: 16px; border-radius: 8px; overflow-x: auto; font-size: 0.85em; line-height: 1.6; margin: 12px 0; font-family: "Cascadia Code", "Fira Code", "Consolas", monospace; }
+  code { font-family: "Cascadia Code", "Fira Code", "Consolas", monospace; }
+  .inline-code { background: #f1f5f9; padding: 2px 6px; border-radius: 4px; font-size: 0.88em; color: #be185d; }
+
+  /* Callout */
+  .callout { padding: 16px 20px; border-radius: 8px; margin: 16px 0; font-size: 0.92em; }
+  .callout-tip { background: #ecfdf5; border-left: 4px solid var(--success); }
+  .callout-warn { background: #fffbeb; border-left: 4px solid var(--accent); }
+  .callout-danger { background: #fef2f2; border-left: 4px solid var(--danger); }
+  .callout-info { background: #eff6ff; border-left: 4px solid var(--primary); }
+  .callout strong { display: block; margin-bottom: 4px; }
+
+  /* Table */
+  table { width: 100%; border-collapse: collapse; margin: 12px 0; font-size: 0.9em; }
+  th, td { padding: 10px 14px; text-align: left; border-bottom: 1px solid var(--border); }
+  th { background: #f1f5f9; font-weight: 600; white-space: nowrap; }
+  tr:hover { background: #f8fafc; }
+
+  /* Comparison */
+  .compare { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin: 16px 0; }
+  .compare-box { background: var(--card); border-radius: 10px; padding: 20px; border: 1px solid var(--border); }
+  .compare-box h5 { margin-bottom: 10px; font-size: 1em; }
+  .compare-box.bad { border-color: #fca5a5; }
+  .compare-box.good { border-color: #86efac; }
+  .compare-box.bad h5 { color: var(--danger); }
+  .compare-box.good h5 { color: var(--success); }
+
+  /* Steps */
+  .steps { counter-reset: step; }
+  .step { position: relative; padding-left: 48px; margin-bottom: 20px; }
+  .step::before { counter-increment: step; content: counter(step); position: absolute; left: 0; top: 0; width: 32px; height: 32px; background: var(--primary); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 0.9em; }
+
+  /* Project tree */
+  .tree { background: #1e293b; color: #94a3b8; padding: 16px 20px; border-radius: 8px; font-family: "Cascadia Code", "Fira Code", monospace; font-size: 0.82em; line-height: 1.8; margin: 12px 0; }
+  .tree .folder { color: #60a5fa; }
+  .tree .file-sql { color: #fbbf24; }
+  .tree .file-md { color: #34d399; }
+  .tree .file-csv { color: #f472b6; }
+  .tree .comment { color: #64748b; }
+
+  /* Img placeholder */
+  .screenshot { background: linear-gradient(135deg, #f1f5f9, #e2e8f0); border: 2px dashed var(--border); border-radius: 10px; padding: 40px; text-align: center; color: var(--muted); margin: 16px 0; font-size: 0.9em; }
+  .screenshot .icon { font-size: 2em; margin-bottom: 8px; }
+
+  /* Feature grid */
+  .feature-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; margin: 16px 0; }
+  .feature-card { background: var(--card); border-radius: 10px; padding: 20px; border: 1px solid var(--border); transition: box-shadow 0.2s; }
+  .feature-card:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
+  .feature-card .icon { font-size: 1.8em; margin-bottom: 8px; }
+  .feature-card h5 { margin-bottom: 6px; }
+  .feature-card p { font-size: 0.88em; color: var(--muted); }
+
+  /* TOC */
+  .toc { background: var(--card); border-radius: 12px; padding: 24px 28px; margin-bottom: 32px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+  .toc h3 { margin-bottom: 12px; }
+  .toc ul { list-style: none; }
+  .toc li { padding: 4px 0; }
+  .toc li::before { content: ""; display: inline-block; width: 6px; height: 6px; background: var(--primary); border-radius: 50%; margin-right: 10px; vertical-align: middle; }
+  .toc .time { color: var(--muted); font-size: 0.85em; margin-left: 6px; }
+
+  /* Footer */
+  .footer { text-align: center; padding: 30px; color: var(--muted); font-size: 0.85em; border-top: 1px solid var(--border); margin-top: 40px; }
+
+  /* Cursor UI Mockup */
+  .cursor-window { border: 1px solid #374151; border-radius: 10px; overflow: hidden; margin: 20px 0; box-shadow: 0 8px 32px rgba(0,0,0,0.18); font-size: 0.82em; }
+  .cursor-titlebar { background: #1f2937; color: #9ca3af; padding: 8px 14px; display: flex; align-items: center; gap: 8px; }
+  .cursor-titlebar .dots { display: flex; gap: 6px; }
+  .cursor-titlebar .dots span { width: 12px; height: 12px; border-radius: 50%; }
+  .cursor-titlebar .dots .r { background: #ef4444; } .cursor-titlebar .dots .y { background: #f59e0b; } .cursor-titlebar .dots .g { background: #22c55e; }
+  .cursor-titlebar .title { flex: 1; text-align: center; font-size: 0.9em; }
+  .cursor-body { display: flex; background: #111827; min-height: 260px; }
+  .cursor-sidebar { width: 200px; background: #1a1f2e; border-right: 1px solid #2d3548; padding: 8px 0; flex-shrink: 0; color: #8b95a5; font-family: "Cascadia Code","Fira Code",monospace; font-size: 0.88em; }
+  .cursor-sidebar .sb-title { padding: 6px 12px; font-size: 0.8em; text-transform: uppercase; letter-spacing: 1px; color: #5f6b7a; font-weight: 600; }
+  .cursor-sidebar .sb-item { padding: 3px 12px 3px 20px; cursor: default; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .cursor-sidebar .sb-item:hover { background: #252d3d; }
+  .cursor-sidebar .sb-item.active { background: #2563eb22; color: #60a5fa; }
+  .cursor-sidebar .sb-folder { color: #60a5fa; padding: 3px 12px; }
+  .cursor-editor { flex: 1; padding: 12px 16px; color: #d1d5db; font-family: "Cascadia Code","Fira Code",monospace; line-height: 1.7; overflow: hidden; }
+  .cursor-editor .ln { color: #4b5563; display: inline-block; width: 28px; text-align: right; margin-right: 12px; user-select: none; }
+  .cursor-editor .kw { color: #c084fc; } .cursor-editor .fn { color: #60a5fa; } .cursor-editor .str { color: #34d399; } .cursor-editor .cm { color: #6b7280; } .cursor-editor .num { color: #fbbf24; }
+  .cursor-chatpanel { width: 320px; background: #1a1f2e; border-left: 1px solid #2d3548; display: flex; flex-direction: column; }
+  .cursor-chatpanel .cp-header { padding: 10px 14px; border-bottom: 1px solid #2d3548; color: #9ca3af; font-weight: 600; font-size: 0.9em; display: flex; align-items: center; gap: 6px; }
+  .cursor-chatpanel .cp-header .agent-badge { background: #7c3aed; color: white; padding: 1px 8px; border-radius: 10px; font-size: 0.8em; font-weight: 500; }
+  .cursor-chatpanel .cp-body { flex: 1; padding: 12px; overflow: hidden; }
+  .cursor-chatpanel .cp-msg { margin-bottom: 10px; }
+  .cursor-chatpanel .cp-user { background: #2563eb33; color: #93c5fd; padding: 8px 10px; border-radius: 8px; font-size: 0.9em; line-height: 1.5; }
+  .cursor-chatpanel .cp-ai { background: #1f2937; color: #d1d5db; padding: 8px 10px; border-radius: 8px; font-size: 0.9em; line-height: 1.5; }
+  .cursor-chatpanel .cp-input { padding: 10px; border-top: 1px solid #2d3548; }
+  .cursor-chatpanel .cp-inputbox { background: #111827; border: 1px solid #374151; border-radius: 8px; padding: 8px 12px; color: #6b7280; font-size: 0.88em; width: 100%; }
+  .cursor-label { text-align: center; color: var(--muted); font-size: 0.82em; margin-top: 6px; font-style: italic; }
+
+  /* Accordion for cases */
+  .case-toggle { display: flex; align-items: center; cursor: pointer; user-select: none; }
+  .case-toggle::after { content: '\25BC'; font-size: 0.65em; color: var(--muted); transition: transform 0.3s; flex-shrink: 0; margin-left: auto; }
+  .case-toggle.open::after { transform: rotate(180deg); }
+  .case-body { max-height: 0; overflow: hidden; transition: max-height 0.4s ease; }
+  .case-body.open { max-height: 5000px; }
+
+  /* Phase color bars */
+  .phase.phase-pre { border-left: 4px solid var(--primary); }
+  .phase.phase-mid { border-left: 4px solid var(--accent); }
+  .phase.phase-post { border-left: 4px solid var(--success); }
+
+  /* Typewriter animation */
+  @keyframes typewriter-blink { 0%,100%{opacity:1;} 50%{opacity:0;} }
+  .typewriter-cursor { display: inline-block; width: 2px; height: 1em; background: var(--primary); margin-left: 2px; animation: typewriter-blink 0.8s infinite; vertical-align: text-bottom; }
+
+  /* Table row hover */
+  table tr:hover td { background: #e0edff !important; transition: background 0.15s; }
+  table tr:first-child:hover th { background: initial !important; }
+
+  /* Data preview panel */
+  .preview-panel { max-height: 0; overflow: hidden; transition: max-height 0.35s ease; margin-top: 0; }
+  .preview-panel.open { max-height: 600px; overflow-y: auto; margin-top: 12px; }
+  .preview-table { font-size: 0.78em; width: 100%; border-collapse: collapse; }
+  .preview-table th, .preview-table td { padding: 4px 8px; border: 1px solid var(--border); text-align: left; white-space: nowrap; }
+  .preview-table th { background: #f1f5f9; font-weight: 600; position: sticky; top: 0; }
+  .preview-btn { background: none; border: 1px solid var(--border); padding: 4px 12px; border-radius: 6px; cursor: pointer; font-size: 0.82em; color: var(--muted); transition: all 0.15s; }
+  .preview-btn:hover { border-color: var(--primary); color: var(--primary); }
+
+  /* Download button */
+  .dl-btn { display: inline-flex; align-items: center; gap: 6px; background: var(--primary); color: white; border: none; padding: 8px 18px; border-radius: 8px; cursor: pointer; font-size: 0.88em; font-weight: 500; transition: background 0.15s; text-decoration: none; }
+  .dl-btn:hover { background: #1d4ed8; }
+  .dl-btn .dl-icon { font-size: 1.1em; }
+  .dl-group { display: flex; flex-wrap: wrap; gap: 10px; margin: 16px 0; }
+
+  @media (min-width: 641px) {
+    body { padding-left: 180px; }
+  }
+  @media (max-width: 640px) {
+    .hero { padding: 40px 20px; }
+    .hero h1 { font-size: 1.6em; }
+    .compare { grid-template-columns: 1fr; }
+    .timeline-item:not(:last-child)::after { display: none; }
+    .side-nav { display: none; }
+  }
+</style>
+</head>
+<body>
+<div id="progress-bar"></div>
+<nav class="side-nav" id="side-nav">
+  <div class="nav-title">培训目录</div>
+  <a href="#s1">一、为什么需要AI</a>
+  <a href="#s2">二、Cursor是什么</a>
+  <a href="#s2b">三、基础与工具准备</a>
+  <a href="#s3">四、项目前期</a>
+  <a href="#s4">五、项目中期</a>
+  <a href="#s5">六、项目后期</a>
+  <a href="#s6">七、使用原则</a>
+  <a href="#s7">八、MCP与Skills</a>
+  <a href="#s-practice">★ 动手试试</a>
+</nav>
+<button id="back-top" onclick="window.scrollTo({top:0})">&#8593;</button>
+<div class="container">
+
+<!-- ==================== HERO ==================== -->
+<div class="hero">
+  <h1>有了Cursor，SQL、Python<br>比IFRS、US-GAAP简单多了</h1>
+  <div class="subtitle">以「客户奖励费用审计」项目为案例，手把手教你用AI提升日常工作效率</div>
+  <div class="meta">面向财务团队 | 培训时长：约60分钟 | 2026年3月</div>
+</div>
+
+<!-- ==================== TOC ==================== -->
+<div class="toc">
+  <h3>培训议程</h3>
+  <ul>
+    <li>一、为什么我们需要AI工具 — 痛点与效率对比 <span class="time">5 min</span></li>
+    <li>二、Cursor 是什么 & 3分钟上手 <span class="time">8 min</span></li>
+    <li>三、基础概念与工具准备 — SQL/Python/FDS/Cursor账号 <span class="time">7 min</span></li>
+    <li>四、项目前期 — AI帮你规划和理解 <span class="time">8 min</span></li>
+    <li>五、项目中期 — AI帮你写代码和分析 <span class="time">15 min</span></li>
+    <li>六、项目后期 — AI帮你总结和写报告 <span class="time">7 min</span></li>
+    <li>七、使用原则与注意事项 <span class="time">5 min</span></li>
+    <li>八、进阶功能 — MCP与Skills扩展 <span class="time">5 min</span></li>
+    <li>★ 动手试试 — 用AI处理Excel数据实战 <span class="time">5 min</span></li>
+  </ul>
+</div>
+
+<!-- ==================== SECTION 1 ==================== -->
+<div class="section" id="s1">
+  <div class="section-header">
+    <div class="num">1</div>
+    <h2>为什么我们需要AI工具</h2>
+  </div>
+
+  <div class="phase">
+    <p style="color:var(--muted); font-size:0.95em; margin-bottom:18px;">2022年ChatGPT发布以来，大语言模型已经从"聊天玩具"进化为"工作工具"。Cursor就是把这种能力嵌入了我们日常工作流的最佳实践。</p>
+    <h3>你的日常痛点，AI都能帮你解决</h3>
+    <p>作为互联网券商的财务同事，这些场景你一定不陌生：</p>
+    <table>
+      <tr><th>日常痛点</th><th>传统做法</th><th>用 Cursor + AI 之后</th></tr>
+      <tr><td><b>月结对账</b>：多市场（HK/US/SG）的交易流水、佣金收入、结算数据需要交叉核对</td><td>从各系统导出Excel，VLOOKUP逐条比对，半天~1天</td><td>告诉AI"帮我比对这几个表的差异"，Python脚本自动关联、标注差异，<b>10分钟</b></td></tr>
+      <tr><td><b>临时取数</b>：管理层突然要某个维度的数据，但BI没有现成报表</td><td>提需求排期，等BI团队提供，1~3天</td><td>告诉AI你要什么数据，它帮你写SQL，自己在FDS跑，<b>30分钟</b></td></tr>
+      <tr><td><b>费用核对</b>：营销活动费用、渠道佣金、供应商账单需要与系统数据核对</td><td>Excel透视表+手工抽查，容易遗漏</td><td>AI写脚本自动全量比对，输出差异明细和金额汇总，<b>遗漏率≈0</b></td></tr>
+      <tr><td><b>预算分析</b>：按部门/市场/活动拆分实际支出 vs 预算，找出超支项</td><td>手工整理多个报表，搭建Excel模型，1~2天</td><td>告诉AI规则，它自动汇总、对比、生成超支预警报告，<b>1小时</b></td></tr>
+      <tr><td><b>监管报表</b>：按SFC/SEC等不同监管要求准备数据，格式要求各不同</td><td>反复调整格式、校验数据，半天起步</td><td>AI按模板自动转换格式、填充数据、校验一致性，<b>大幅减少返工</b></td></tr>
+      <tr><td><b>写分析报告</b>：月度费用分析、活动ROI评估等需要图文并茂</td><td>从零码字+做图表，反复调格式</td><td>把数据喂给AI，它生成分析初稿+图表，你修改润色，<b>2小时</b></td></tr>
+    </table>
+  </div>
+
+  <div class="phase">
+    <h3>本次项目的真实效率数据</h3>
+    <p>在奖励费用审计项目中，以下任务的效率对比：</p>
+    <table>
+      <tr><th>任务</th><th>传统方式</th><th>Cursor + AI</th></tr>
+      <tr><td>处理并分析发奖流水数据</td><td style="color:var(--danger);">单独HK市场就有3700+万行，我只会Excel，处理不了</td><td style="color:var(--success);">1小时了解整体数据结构</td></tr>
+      <tr><td>从流水中筛选出重复发奖行</td><td style="color:var(--danger);">不会SQL，不知道如何提取出来</td><td style="color:var(--success);">10分钟和Cursor聊明白一个新规则，1分钟生成代码</td></tr>
+      <tr><td>从FDS平台提取数据</td><td style="color:var(--danger);">看不懂数据开发系统的介绍文档</td><td style="color:var(--success);">把所有介绍文档喂给Cursor，2小时一步一步教我搞定所有权限申请</td></tr>
+      <tr><td>把异常结果整理为审计报告</td><td style="color:var(--danger);">至少半天完成统计、写文字、画图表</td><td style="color:var(--success);">半小时让Cursor改3版图文并茂的报告</td></tr>
+    </table>
+
+    <div class="callout callout-info">
+      <strong>核心理念：AI是你的"副驾驶"</strong>
+      AI不会替代你的专业判断，但它能帮你快速完成重复性、技术性的工作。<b>你不需要学编程</b>——只要能用中文说清楚"你想做什么"，AI来帮你翻译成代码。
+    </div>
+  </div>
+</div>
+
+<!-- ==================== SECTION 2 ==================== -->
+<div class="section" id="s2">
+  <div class="section-header">
+    <div class="num">2</div>
+    <h2>Cursor 是什么 & 3分钟上手</h2>
+  </div>
+
+  <div class="phase">
+    <h3>Cursor = 代码编辑器 + 内置AI</h3>
+    <p>你可以把 Cursor 理解为一个<b>自带AI助手的超级记事本</b>。它和 VS Code 长得一样，但多了一个关键能力：AI可以<b>看到你所有的文件</b>，并直接帮你写和改。</p>
+
+    <div class="compare">
+      <div class="compare-box bad">
+        <h5>直接用 ChatGPT 网页版</h5>
+        <ul style="font-size:0.9em; padding-left:18px; color:var(--muted);">
+          <li>每次要手动复制粘贴代码</li>
+          <li>AI看不到你的项目结构</li>
+          <li>上下文容易断裂</li>
+          <li>修改后要手动粘贴回来</li>
+          <li>无法引用多个文件</li>
+        </ul>
+      </div>
+      <div class="compare-box good">
+        <h5>用 Cursor</h5>
+        <ul style="font-size:0.9em; padding-left:18px; color:var(--muted);">
+          <li>AI自动读取你的文件</li>
+          <li>能理解整个项目结构</li>
+          <li>对话连续不中断</li>
+          <li>AI直接帮你修改文件</li>
+          <li>可以同时引用多个文件（用 @）</li>
+        </ul>
+      </div>
+    </div>
+
+    <h4>Cursor 界面一览</h4>
+    <div class="cursor-window">
+      <div class="cursor-titlebar">
+        <div class="dots"><span class="r"></span><span class="y"></span><span class="g"></span></div>
+        <div class="title">Cursor — 奖励审计代码</div>
+      </div>
+      <div class="cursor-body">
+        <div class="cursor-sidebar">
+          <div class="sb-title">Explorer</div>
+          <div class="sb-folder">▾ 01_项目背景和审计计划</div>
+          <div class="sb-item">&nbsp;&nbsp;项目背景及审计计划.md</div>
+          <div class="sb-item">&nbsp;&nbsp;数据字典.md</div>
+          <div class="sb-folder">▾ 02_审计代码</div>
+          <div class="sb-item">&nbsp;&nbsp;▸ 02.1_统计分析SQL</div>
+          <div class="sb-item">&nbsp;&nbsp;▸ 02.2_重复发奖检查SQL</div>
+          <div class="sb-item active">&nbsp;&nbsp;▸ 02.3_风控检查SQL</div>
+          <div class="sb-folder">▾ 03_审计结果</div>
+          <div class="sb-item">&nbsp;&nbsp;▸ 03.1_HK市场</div>
+        </div>
+        <div class="cursor-editor">
+          <div><span class="ln">1</span><span class="cm">-- 活动粒度发奖核销统计</span></div>
+          <div><span class="ln">2</span><span class="kw">WITH</span> base <span class="kw">AS</span> (</div>
+          <div><span class="ln">3</span>&nbsp;&nbsp;<span class="kw">SELECT</span> *</div>
+          <div><span class="ln">4</span>&nbsp;&nbsp;<span class="kw">FROM</span> <span class="fn">bi_inter.hk_prize_order_info_df</span></div>
+          <div><span class="ln">5</span>&nbsp;&nbsp;<span class="kw">WHERE</span> application_created_date</div>
+          <div><span class="ln">6</span>&nbsp;&nbsp;&nbsp;&nbsp;<span class="kw">BETWEEN</span> <span class="str">'2024-01-01'</span> <span class="kw">AND</span> <span class="str">'2026-02-28'</span></div>
+          <div><span class="ln">7</span>&nbsp;&nbsp;&nbsp;&nbsp;<span class="kw">AND</span> application_send_status = <span class="str">'3'</span></div>
+          <div><span class="ln">8</span>)</div>
+          <div><span class="ln">9</span><span class="kw">SELECT</span></div>
+          <div><span class="ln">10</span>&nbsp;&nbsp;act_config_sign <span class="kw">AS</span> <span class="str">`活动标识`</span>,</div>
+          <div><span class="ln">11</span>&nbsp;&nbsp;<span class="fn">COUNT</span>(<span class="kw">DISTINCT</span> order_id) <span class="kw">AS</span> <span class="str">`发奖笔数`</span></div>
+        </div>
+        <div class="cursor-chatpanel">
+          <div class="cp-header">AI Chat <span class="agent-badge">Agent</span></div>
+          <div class="cp-body">
+            <div class="cp-msg"><div class="cp-user">@数据字典.md 帮我写一个按活动维度统计发奖金额和核销率的SQL</div></div>
+            <div class="cp-msg"><div class="cp-ai">好的，我参考了数据字典中的表结构，为你生成了一个统计SQL...<br><br>已创建文件：<code>活动粒度发奖核销统计.sql</code></div></div>
+          </div>
+          <div class="cp-input"><div class="cp-inputbox">输入消息，或用 @ 引用文件...</div></div>
+        </div>
+      </div>
+    </div>
+    <div class="cursor-label">Cursor 界面示意：左侧文件树 + 中间代码编辑区 + 右侧AI对话面板</div>
+
+    <h4>你需要知道的3个核心功能</h4>
+    <div class="feature-grid">
+      <div class="feature-card">
+        <div class="icon">💬</div>
+        <h5>AI 对话（Chat）</h5>
+        <p>按 <span class="inline-code">Ctrl+L</span> 打开，像跟同事聊天一样提需求。它能看到你当前打开的文件。</p>
+      </div>
+      <div class="feature-card">
+        <div class="icon">🤖</div>
+        <h5>Agent 模式</h5>
+        <p>在对话框中切换为 Agent 模式，AI会自动搜索项目文件、编写代码、创建文件，一条龙服务。</p>
+      </div>
+      <div class="feature-card">
+        <div class="icon">📎</div>
+        <h5>@ 引用</h5>
+        <p>在对话中输入 <span class="inline-code">@文件名</span> 把文件"喂"给AI。比如 <span class="inline-code">@数据字典.md</span> 让AI理解你的数据表结构。</p>
+      </div>
+    </div>
+
+    <div class="callout callout-tip">
+      <strong>快速上手步骤</strong>
+      1. 打开 Cursor → 用「文件 → 打开文件夹」打开你的项目目录<br>
+      2. 按 <span class="inline-code">Ctrl+L</span> 打开AI对话窗口<br>
+      3. 在对话窗口底部选择 <b>Agent</b> 模式<br>
+      4. 开始用自然语言提需求！
+    </div>
+  </div>
+</div>
+
+<!-- ==================== SECTION 2.5 ==================== -->
+<div class="section" id="s2b">
+  <div class="section-header">
+    <div class="num">3</div>
+    <h2>基础概念与工具准备</h2>
+  </div>
+
+  <div class="phase">
+    <h3>30秒理解：SQL 和 Python 是什么？</h3>
+
+    <div class="compare">
+      <div class="compare-box good" style="border-color: #93c5fd;">
+        <h5 style="color: var(--primary);">SQL — 向数据库"提问"的语言</h5>
+        <p style="font-size:0.9em; color: var(--text);">
+          SQL就像是对数据库说的"普通话"。你用它告诉数据库：<b>"我想看什么数据"</b>。<br><br>
+          举个例子，你想知道"2024年HK市场每个活动发了多少钱"，用SQL就是：
+        </p>
+<pre style="font-size:0.8em; margin-top:8px;">
+<span style="color:#c084fc;">SELECT</span> act_title, <span style="color:#60a5fa;">SUM</span>(send_amt_hkd)
+<span style="color:#c084fc;">FROM</span> 发奖流水表
+<span style="color:#c084fc;">WHERE</span> year = <span style="color:#34d399;">'2024'</span>
+<span style="color:#c084fc;">GROUP BY</span> act_title
+</pre>
+        <p style="font-size:0.85em; color:var(--muted); margin-top:8px;">翻译成人话：从发奖流水表里，按活动名称汇总发奖金额，只看2024年的数据。</p>
+      </div>
+      <div class="compare-box good" style="border-color: #86efac;">
+        <h5 style="color: var(--success);">Python — 让电脑自动干活的语言</h5>
+        <p style="font-size:0.9em; color: var(--text);">
+          Python就像是给电脑写的"操作指令"。你用它告诉电脑：<b>"帮我自动做这些事"</b>。<br><br>
+          举个例子，你想把10个Excel文件合并成一个：
+        </p>
+<pre style="font-size:0.8em; margin-top:8px;">
+<span style="color:#c084fc;">import</span> pandas <span style="color:#c084fc;">as</span> pd
+<span style="color:#c084fc;">import</span> glob
+
+files = glob.glob(<span style="color:#34d399;">"*.xlsx"</span>)
+result = pd.concat([pd.read_excel(f) <span style="color:#c084fc;">for</span> f <span style="color:#c084fc;">in</span> files])
+result.to_excel(<span style="color:#34d399;">"合并结果.xlsx"</span>)
+</pre>
+        <p style="font-size:0.85em; color:var(--muted); margin-top:8px;">翻译成人话：读取当前目录下所有xlsx文件，合并在一起，保存为"合并结果.xlsx"。</p>
+      </div>
+    </div>
+
+    <div class="callout callout-info">
+      <strong>你不需要记住这些代码！</strong>
+      以上代码只是让你对SQL和Python有个直观感受。实际使用中，你只需要<b>用中文告诉AI你想做什么</b>，AI会帮你写好代码。你要做的只是把AI写好的SQL复制到FDS平台运行，或者让AI直接运行Python脚本。
+    </div>
+  </div>
+
+  <div class="phase">
+    <h3>工具准备清单</h3>
+    <p>要开始使用AI提效，你需要准备以下两个工具：</p>
+
+    <div class="feature-grid">
+      <div class="feature-card">
+        <div class="icon">🔧</div>
+        <h5>① Cursor（AI编码工具）</h5>
+        <p>
+          <b>申请入口：</b><a href="https://my.futuoa.com/form/apply/register_cursor" target="_blank" style="color:var(--primary);">个人工作台申请</a>（无需Leader审批）<br>
+          <b>费用：</b>公司统一采购Business版，$20/月固定 + $20按量付费<br>
+          <b>额度不够？</b><a href="https://my.futuoa.com/form/apply/update_cursor_quota" target="_blank" style="color:var(--primary);">申请提额</a> 或使用 VSCode + Copilot<br>
+          <b>注意：</b>15天不使用会被自动回收
+        </p>
+        <p style="font-size:0.82em; margin-top:8px;"><a href="https://futu.feishu.cn/docx/JMHDd5luQohYQGx380IcPxw2nFk" target="_blank" style="color:var(--muted);">→ 完整指引文档</a></p>
+      </div>
+      <div class="feature-card">
+        <div class="icon">🗄️</div>
+        <h5>② FDS数据平台（跑SQL的地方）</h5>
+        <p>
+          <b>平台地址：</b><a href="https://cnfds.futuoa.com" target="_blank" style="color:var(--primary);">cnfds.futuoa.com</a>（国内大中台）<br>
+          <b>权限申请三步走：</b><br>
+          　1. 加入项目组<br>
+          　2. 申请"数据分析师"角色<br>
+          　3. 申请数据表权限<br>
+          <b>功能：</b>写SQL → 运行 → 查看结果 → 下载CSV
+        </p>
+        <p style="font-size:0.82em; margin-top:8px;"><a href="https://futu.feishu.cn/wiki/KfUIwNdIhiF98xk4sXscUpHjnmh" target="_blank" style="color:var(--muted);">→ FDS产品概述</a> | <a href="https://futu.feishu.cn/wiki/EshnwzwkFi6udvkpS3AcwVBBnpb" target="_blank" style="color:var(--muted);">→ SQL查询指引</a> | <a href="https://futu.feishu.cn/wiki/BJoNwhUSliQtfkkR4BgcEzmvnPg" target="_blank" style="color:var(--muted);">→ 权限申请</a></p>
+      </div>
+    </div>
+
+    <div class="callout callout-tip">
+      <strong>工作流程是这样串起来的</strong>
+      <b>Cursor</b>（AI帮你写SQL/Python）→ 把SQL复制到 <b>FDS</b>（运行查询、拿到数据）→ 回到 <b>Cursor</b>（AI帮你分析结果、写报告）
+    </div>
+  </div>
+</div>
+
+<!-- ==================== 项目三阶段总览 ==================== -->
+<div class="timeline">
+  <div class="timeline-item t-pre">
+    <div class="dot">📋</div>
+    <b>项目前期</b>
+    <div style="font-size:0.85em;color:var(--muted);">规划 · 理解 · 准备</div>
+  </div>
+  <div class="timeline-item t-mid">
+    <div class="dot">⚡</div>
+    <b>项目中期</b>
+    <div style="font-size:0.85em;color:var(--muted);">查询 · 分析 · 执行</div>
+  </div>
+  <div class="timeline-item t-post">
+    <div class="dot">📊</div>
+    <b>项目后期</b>
+    <div style="font-size:0.85em;color:var(--muted);">总结 · 报告 · 输出</div>
+  </div>
+</div>
+
+<!-- ==================== SECTION 3: 审计前期 ==================== -->
+<div class="section" id="s3">
+  <div class="section-header">
+    <div class="num">4</div>
+    <h2>项目前期 — AI帮你规划和理解</h2>
+  </div>
+
+  <!-- Case 3.1 -->
+  <div class="phase">
+    <h3><span class="badge badge-blue">案例 1</span> 让AI帮你梳理项目思路和工作框架</h3>
+    <p>项目启动时，你需要把模糊的工作方向变成结构化的计划。来看看怎么跟AI提需求：</p>
+
+    <div class="chat">
+      <div class="chat-msg">
+        <div class="chat-avatar user">你</div>
+        <div>
+          <div class="chat-label">你对AI说：</div>
+          <div class="chat-bubble user-bubble">
+            我需要对公司的客户奖励费用进行专项检查。范围包括HK、MY、US三个市场。奖励类型包括新客奖励、裂变奖励、KOL渠道奖励等。<br><br>
+            请帮我从用户生命周期和风险等级两个维度，设计一个结构化的工作框架，并列出每个检查项的检查方法和异常判定标准。
+          </div>
+        </div>
+      </div>
+      <div class="chat-msg">
+        <div class="chat-avatar ai">AI</div>
+        <div>
+          <div class="chat-label">AI回复（节选）：</div>
+          <div class="chat-bubble">
+            <b>从用户生命周期视角，审计可分为5个阶段：</b><br>
+            ① 发奖前：用户是否满足发奖资格？<br>
+            ② 发奖时：是否被风控拦截？拦截后是否被放行？<br>
+            ③ 发奖时：是否重复发奖？<br>
+            ④ 发奖后：用户是否留存？还是领完就跑？<br>
+            ⑤ 全流程：是否存在内部舞弊？<br><br>
+            <b>按风险等级排序：</b><br>
+            第一层 ★★★★★ 舞弊风险排查<br>
+            第二层 ★★★★☆ 流失情况检查<br>
+            第三层 ★★★☆☆ 发奖资格检查<br>
+            ……（AI会继续给出每一项的检查方法和判定标准）
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="callout callout-tip">
+      <strong>实际成果</strong>
+      本项目的 <span class="inline-code">项目背景及审计计划.md</span> 就是在AI帮助下完成的。从五层风险矩阵到10种重复发奖检测规则，AI帮你把模糊的想法结构化，你负责审核和补充专业判断。
+    </div>
+  </div>
+
+  <!-- Case 3.2 -->
+  <div class="phase">
+    <h3><span class="badge badge-blue">案例 2</span> 让AI帮你理解陌生的数据表</h3>
+    <p>接手一个新项目，拿到一堆不熟悉的数据表，不知道从何看起？让AI帮你快速消化：</p>
+
+    <div class="chat">
+      <div class="chat-msg">
+        <div class="chat-avatar user">你</div>
+        <div>
+          <div class="chat-label">你对AI说：</div>
+          <div class="chat-bubble user-bubble">
+            @数据字典_字段表.csv<br><br>
+            这是奖励发奖流水表的完整字段列表，共80个字段。我是财务人员，需要做费用分析。请帮我：<br>
+            1. 按业务含义分组整理（比如金额类、时间类、状态类等）<br>
+            2. 标注出做费用分析最重要的字段有哪些<br>
+            3. 说明各种状态字段的取值含义（比如发放状态、核销状态）
+          </div>
+        </div>
+      </div>
+      <div class="chat-msg">
+        <div class="chat-avatar ai">AI</div>
+        <div>
+          <div class="chat-label">AI回复（节选）：</div>
+          <div class="chat-bubble">
+            <b>字段分组整理：</b><br>
+            • 金额类：send_amt_hkd（发放金额）、write_off_amt_hkd（核销金额）、expired_amt_hkd（过期金额）...<br>
+            • 时间类：application_created_date（创建日期）、get_date_string（领取日期）...<br>
+            • 状态类：application_send_status（3=成功）、prize_task_status（0=无任务/2=已解冻/3=已过期）...<br><br>
+            <b>费用分析核心字段：</b>send_amt_hkd、write_off_amt_hkd、act_title、origin（发奖方式）、prize_name...
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <h4>@ 引用 — Cursor最强大的功能</h4>
+    <div class="cursor-window">
+      <div class="cursor-titlebar">
+        <div class="dots"><span class="r"></span><span class="y"></span><span class="g"></span></div>
+        <div class="title">Cursor — AI Chat</div>
+      </div>
+      <div class="cursor-body" style="min-height:160px;">
+        <div class="cursor-chatpanel" style="width:100%; border:none;">
+          <div class="cp-header">AI Chat <span class="agent-badge">Agent</span></div>
+          <div class="cp-body">
+            <div class="cp-msg"><div class="cp-user">
+              <span style="background:#7c3aed44;color:#c4b5fd;padding:1px 6px;border-radius:4px;">@数据字典.md</span>
+              <span style="background:#7c3aed44;color:#c4b5fd;padding:1px 6px;border-radius:4px;">@通用新客奖励重复发奖明细.sql</span><br><br>
+              请帮我理解这个SQL的逻辑，它检查了哪些异常情况？每种情况的判定标准是什么？
+            </div></div>
+            <div class="cp-msg"><div class="cp-ai">我已阅读了这两个文件。这个SQL检测了<b>10种重复发奖</b>异常情况，分为单活动和跨活动两大类...</div></div>
+          </div>
+          <div class="cp-input"><div class="cp-inputbox">输入消息，或输入 @ 引用项目中的文件...</div></div>
+        </div>
+      </div>
+    </div>
+    <div class="cursor-label">用 @ 引用多个文件，AI可以综合理解所有文件内容并回答问题</div>
+
+    <div class="callout callout-info">
+      <strong>@ 引用可以引什么？</strong>
+      • <b>@文件名</b> — 引用项目中的任意文件（SQL、Markdown、CSV、Python等）<br>
+      • <b>@文件夹名</b> — 引用整个文件夹的所有内容<br>
+      • 可以<b>同时引用多个</b>，例如：<span class="inline-code">@数据字典.md @活动统计.sql @结果.csv</span><br>
+      • AI会综合理解所有引用内容，不需要你手动复制粘贴
+    </div>
+  </div>
+
+</div>
+
+<!-- ==================== SECTION 4: 审计中期 ==================== -->
+<div class="section" id="s4">
+  <div class="section-header">
+    <div class="num">5</div>
+    <h2>项目中期 — AI帮你写代码和分析</h2>
+  </div>
+
+  <div class="callout callout-warn">
+    <strong>重点章节</strong>
+    这是培训的核心部分。即使你完全不会写代码，只要能用自然语言描述"你想查什么"，AI就能帮你写出SQL。关键是学会<b>如何描述需求</b>。
+  </div>
+
+  <!-- Case 4.1 -->
+  <div class="phase mid">
+    <h3><span class="badge badge-amber">案例 4</span> 从零编写SQL — 活动发奖统计分析</h3>
+    <p><b>工作场景：</b>需要按活动维度统计发奖金额、核销率、Top活动排名，了解各类奖励活动的整体费用情况。</p>
+
+    <h4>第一步：告诉AI你要查什么</h4>
+    <div class="chat">
+      <div class="chat-msg">
+        <div class="chat-avatar user">你</div>
+        <div>
+          <div class="chat-label">你对AI说：</div>
+          <div class="chat-bubble user-bubble">
+            @数据字典.md<br><br>
+            我需要按活动维度统计HK市场的奖励发放情况。<br><br>
+            已知信息：<br>
+            - 发奖流水表：bi_inter.hk_prize_order_info_df（字段见数据字典）<br>
+            - 时间范围：2024-01-01 至 2026-02-28<br>
+            - 只看发送成功的记录（application_send_status='3'）<br>
+            - 排除"免佣种子"和"积分"类的虚拟奖品<br><br>
+            请帮我写一个SQL，按 act_config_sign（活动标识）维度统计：<br>
+            发奖笔数、发奖用户数、发奖总金额(HKD)、已核销金额、核销率、已过期金额、人工发奖占比。<br>
+            按发奖总金额降序排列，取Top50。
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <p>AI会生成一个完整的SQL，使用聚合函数和CASE WHEN逻辑，包含注释和中文字段别名。这正是项目中 <span class="inline-code">活动粒度发奖核销统计_Top50.sql</span> 的雏形。</p>
+
+    <h4>第二步：追加需求，逐步迭代</h4>
+    <div class="chat">
+      <div class="chat-msg">
+        <div class="chat-avatar user">你</div>
+        <div>
+          <div class="chat-bubble user-bubble">
+            很好。我还想看到每个活动的月度趋势——请增加按月统计的维度，以及环比增长率。另外，加一列"奖品最终状态分布"，把已核销、已过期、已作废、待使用的笔数和占比都列出来。
+          </div>
+        </div>
+      </div>
+      <div class="chat-msg">
+        <div class="chat-avatar ai">AI</div>
+        <div>
+          <div class="chat-bubble">
+            好的，我在原有SQL基础上做两个调整：<br>
+            1. 新增 <code>monthly_stats</code> CTE — 按月统计并使用 LAG 窗口函数计算环比<br>
+            2. 增加奖品最终状态字段，使用综合判断逻辑（参考数据字典中的 award_status 方案）<br>
+            （AI直接修改现有SQL文件）
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="callout callout-tip">
+      <strong>提示词技巧：分步迭代</strong>
+      不要试图一次把所有需求说完。先给出核心需求，看到结果后再追加。这样AI能更好地理解你的意图，你也能验证中间结果是否正确。
+    </div>
+  </div>
+
+  <!-- Case 4.2 -->
+  <div class="phase mid">
+    <h3><span class="badge badge-amber">案例 5</span> 编写复杂检测逻辑 — 10种重复发奖检测</h3>
+    <p><b>工作场景：</b>检测通用新客奖励中的10种重复发奖异常情况，并自动划分风险等级。</p>
+
+    <div class="chat">
+      <div class="chat-msg">
+        <div class="chat-avatar user">你</div>
+        <div>
+          <div class="chat-bubble user-bubble">
+            @数据字典.md @项目背景及审计计划.md<br><br>
+            请参考审计计划中"4.2.1 重复发奖检测规则"的10种异常情况和"4.2.2 风险等级划分"，帮我写一个完整的检测SQL。<br><br>
+            要求：<br>
+            1. 用CTE结构，每种情况单独一个CTE<br>
+            2. 最终输出每笔异常流水的明细，包含：违规类型、风险等级、审计建议<br>
+            3. 按风险等级从高到低排序
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <p>AI生成的SQL结构示意（实际产出650行，以下为骨架）：</p>
+<pre>
+<span style="color:#64748b;">-- 10种异常情况检测 + 风险分级</span>
+WITH base AS (
+  <span style="color:#64748b;">-- 筛选基础数据</span>
+  SELECT * FROM bi_inter.hk_prize_order_info_df
+  WHERE ...
+),
+type1 AS (
+  <span style="color:#64748b;">-- 情况1：单活动领奖流水 > 2笔</span>
+  SELECT user_id, act_config_sign
+  FROM base GROUP BY ... HAVING COUNT(*) > 2
+),
+type2 AS ( <span style="color:#64748b;">-- 情况2：单活动金额重复</span> ... ),
+<span style="color:#64748b;">-- ... type3 到 type10 ...</span>
+type10 AS ( <span style="color:#64748b;">-- 情况10：跨活动二阶奖励重复</span> ... ),
+
+abnormal_users AS (
+  <span style="color:#64748b;">-- 合并所有异常用户</span>
+  SELECT user_id FROM type1 UNION ... UNION SELECT user_id FROM type10
+)
+SELECT
+  risk_level,         <span style="color:#64748b;">-- 严重异常/高风险/中风险/需人工审核</span>
+  violation_type,     <span style="color:#64748b;">-- 情况1+3:单活动>2笔且跨活动>2笔</span>
+  audit_suggestion,   <span style="color:#64748b;">-- 【紧急】金额严重异常，建议立即核查</span>
+  ...全部明细字段
+ORDER BY risk_level, total_reward_amount DESC;
+</pre>
+
+    <div class="callout callout-info">
+      <strong>实际成果</strong>
+      这个SQL最终识别出 <b>1,375条</b> 异常发奖记录，涉及通用新客奖励的重复发奖问题。加上其他类型检查，HK市场共发现约 <b>2,013条</b> 异常，实际损失约 <b>20万港币</b>。
+    </div>
+
+    <h4>Cursor Agent 模式实际工作效果</h4>
+    <div class="cursor-window">
+      <div class="cursor-titlebar">
+        <div class="dots"><span class="r"></span><span class="y"></span><span class="g"></span></div>
+        <div class="title">Cursor — 通用新客奖励重复发奖明细.sql</div>
+      </div>
+      <div class="cursor-body" style="min-height:200px;">
+        <div class="cursor-editor" style="flex:1;">
+          <div><span class="ln">1</span><span class="cm">-- 重复发奖检测分析（10种异常情况 + 风险分级）</span></div>
+          <div><span class="ln">2</span><span class="kw">WITH</span> base <span class="kw">AS</span> (</div>
+          <div><span class="ln">3</span>&nbsp;&nbsp;<span class="kw">SELECT</span> * <span class="kw">FROM</span> <span class="fn">bi_inter.hk_prize_order_info_df</span></div>
+          <div><span class="ln">4</span>&nbsp;&nbsp;<span class="kw">WHERE</span> ...</div>
+          <div><span class="ln">5</span>),</div>
+          <div><span class="ln">6</span>type1 <span class="kw">AS</span> ( <span class="cm">-- 情况1：单活动>2笔</span></div>
+          <div style="color:#22c55e;background:#22c55e11;"><span class="ln" style="color:#22c55e;">+</span>&nbsp;&nbsp;<span class="kw">SELECT</span> user_id, act_config_sign</div>
+          <div style="color:#22c55e;background:#22c55e11;"><span class="ln" style="color:#22c55e;">+</span>&nbsp;&nbsp;<span class="kw">FROM</span> base <span class="kw">GROUP BY</span> user_id, act_config_sign</div>
+          <div style="color:#22c55e;background:#22c55e11;"><span class="ln" style="color:#22c55e;">+</span>&nbsp;&nbsp;<span class="kw">HAVING</span> <span class="fn">COUNT</span>(*) > <span class="num">2</span></div>
+          <div><span class="ln">10</span>),</div>
+          <div><span class="ln" style="color:#6b7280;">⋮</span><span class="cm"> ... type2 到 type10 ...</span></div>
+        </div>
+        <div class="cursor-chatpanel" style="width:280px;">
+          <div class="cp-header">AI Chat <span class="agent-badge">Agent</span></div>
+          <div class="cp-body" style="font-size:0.85em;">
+            <div class="cp-msg"><div class="cp-ai" style="font-size:0.9em;">
+              我正在为你生成10种重复发奖检测规则...<br><br>
+              <span style="color:#22c55e;">✓</span> 已创建 base CTE（基础筛选）<br>
+              <span style="color:#22c55e;">✓</span> 已创建 type1~type10（10种检测）<br>
+              <span style="color:#22c55e;">✓</span> 已添加风险等级和审计建议<br>
+              <span style="color:#fbbf24;">▸</span> 正在添加排序和输出格式...
+            </div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="cursor-label">Agent 模式下，AI自动创建文件、编写代码，绿色高亮显示新增行</div>
+  </div>
+
+  <!-- Case 4.3 -->
+  <div class="phase mid">
+    <h3><span class="badge badge-amber">案例 6</span> 基于已有SQL做变体 — KOL渠道互斥检查</h3>
+    <p><b>工作场景：</b>已经写好了通用新客奖励的重复发奖检查SQL，现在要检查KOL渠道是否存在"互斥发奖"（同一用户同时领取KOL专属奖励和通用新客奖励）。</p>
+
+    <div class="chat">
+      <div class="chat-msg">
+        <div class="chat-avatar user">你</div>
+        <div>
+          <div class="chat-bubble user-bubble">
+            @通用新客奖励重复发奖明细.sql<br><br>
+            请参考这个通用新客奖励的检查SQL，帮我写一个KOL渠道互斥检查。逻辑如下：<br><br>
+            1. 找出同时在KOL活动（act_title LIKE '%KOL%'）和通用新客活动中领奖的用户<br>
+            2. 这两类活动本应互斥，同一用户不应该两边都领<br>
+            3. 输出这些用户在两类活动中的领奖明细<br>
+            4. 加上风险评估：按重复金额大小标注风险等级
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="callout callout-tip">
+      <strong>提示词技巧：用 @ 引用参考文件</strong>
+      当你想基于一个已有SQL写变体时，用 <span class="inline-code">@文件名</span> 把参考SQL喂给AI。AI会学习原文件的编码风格、表名、字段名、过滤条件，然后在此基础上做调整。比手动从头写快得多。
+    </div>
+  </div>
+
+  <!-- Case 4.4 -->
+  <div class="phase mid">
+    <h3><span class="badge badge-amber">案例 7</span> 让AI在已有SQL上叠加新逻辑 — 风控拦截分析</h3>
+    <p><b>工作场景：</b>已经有了一个基础的发奖查询SQL，现在想叠加风控维度，分析高风险用户的发奖和核销情况。</p>
+
+    <div class="chat">
+      <div class="chat-msg">
+        <div class="chat-avatar user">你</div>
+        <div>
+          <div class="chat-label">你对AI说：</div>
+          <div class="chat-bubble user-bubble">
+            @数据字典.md @新客活动风险等级4统计分析.sql<br><br>
+            我想在现有的发奖统计SQL上增加风控维度分析。需求如下：<br><br>
+            1. 关联风控审核表，通过order_id字段关联<br>
+            2. 获取每笔发奖的风控评分（resp_level字段，0~4，数值越高风险越大）<br>
+            3. 重点统计风险等级=4的极高风险用户：多少人仍然成功领了奖？核销金额多少？<br>
+            4. 增加智能标签：按"风控等级 + 发奖金额"组合判断，标注"建议复核" / "需关注" / "正常"
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <p>AI会在已有SQL基础上新增CTE来关联风控表，精准添加CASE WHEN标签列，自动处理表关联和字段映射。</p>
+
+    <div class="callout callout-warn">
+      <strong>这个案例说明了什么？</strong>
+      即使是几百行的复杂SQL，AI也能理解现有代码上下文，并在正确的位置添加新逻辑。你只需要把<b>业务规则</b>说清楚——比如"风险等级4的用户如果核销金额超过2000就标注为需复核"——AI负责翻译成代码。这就是"不会写代码也能做数据分析"的核心。
+    </div>
+  </div>
+
+  <!-- Case 4.5 -->
+  <div class="phase mid">
+    <h3><span class="badge badge-amber">案例 8</span> 让AI写Python脚本处理Excel</h3>
+    <p><b>工作场景：</b>需要批量处理导出的CSV结果，合并多个文件，或者做一些Excel公式难以实现的数据清洗。</p>
+
+    <div class="chat">
+      <div class="chat-msg">
+        <div class="chat-avatar user">你</div>
+        <div>
+          <div class="chat-bubble user-bubble">
+            我导出了多个分析结果的CSV文件到 03_审计结果/03.1_HK市场/ 目录下。请帮我写一个Python脚本实现以下功能：<br><br>
+            1. 读取该目录下所有CSV文件<br>
+            2. 按user_id统计每个用户在不同检查类型中出现的次数<br>
+            3. 生成一个汇总Excel，包含：用户ID、涉及的检查类型数、总异常次数、最高风险等级<br>
+            4. 把结果保存为"汇总_异常用户统计.xlsx"
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="callout callout-tip">
+      <strong>Python脚本的典型用途</strong>
+      • 合并多个CSV/Excel文件<br>
+      • 数据清洗（去重、格式转换）<br>
+      • 批量文本处理（正则匹配、替换）<br>
+      • 生成可视化图表<br>
+      • 自动化重复操作<br><br>
+      你不需要学Python语法，只要能描述"你想把数据怎么处理"，AI会帮你写好脚本并直接运行。
+    </div>
+  </div>
+</div>
+
+<!-- ==================== SECTION 5: 审计后期 ==================== -->
+<div class="section" id="s5">
+  <div class="section-header">
+    <div class="num">6</div>
+    <h2>项目后期 — AI帮你总结和写报告</h2>
+  </div>
+
+  <!-- Case 5.1 -->
+  <div class="phase post">
+    <h3><span class="badge badge-green">案例 9</span> 让AI帮你归纳项目发现</h3>
+
+    <div class="chat">
+      <div class="chat-msg">
+        <div class="chat-avatar user">你</div>
+        <div>
+          <div class="chat-label">你对AI说：</div>
+          <div class="chat-bubble user-bubble">
+            @项目背景及审计计划.md @文件结构.md<br><br>
+            请帮我梳理目前的主要发现，按以下格式整理：<br>
+            1. 发现标题<br>
+            2. 问题描述<br>
+            3. 影响金额<br>
+            4. 根本原因<br>
+            5. 改善建议<br>
+            6. 优先级
+          </div>
+        </div>
+      </div>
+      <div class="chat-msg">
+        <div class="chat-avatar ai">AI</div>
+        <div>
+          <div class="chat-bubble">
+            <b>发现一：通用新客奖励重复发奖</b><br>
+            • 问题：2024-2025年10月期间，同一用户在新客奖励活动中重复领取奖励<br>
+            • 影响：1,375条异常记录，涉及约20万港币<br>
+            • 根因：系统规则设置漏洞 + 人工核实漏洞 + 缺少事后检查<br>
+            • 建议：①增加系统层面的去重校验 ②建立月度事后稽核机制<br>
+            • 优先级：<span style="color:red;font-weight:bold;">P0</span><br><br>
+            <b>发现二：KOL渠道互斥发奖</b><br>
+            • 问题：73名用户同时领取KOL专属奖励和通用新客奖励...<br>
+            ……
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="callout callout-tip">
+      <strong>进阶用法：让AI读取结果数据来总结</strong>
+      你还可以用 <span class="inline-code">@KOL互斥重复发奖检查结果.csv</span> 直接让AI读取数据文件。AI会自动统计记录数、金额汇总、异常分布，帮你生成数据驱动的总结。
+    </div>
+  </div>
+
+  <!-- Case 5.2 -->
+  <div class="phase post">
+    <h3><span class="badge badge-green">案例 10</span> 让AI帮你撰写报告和汇报材料</h3>
+
+    <div class="chat">
+      <div class="chat-msg">
+        <div class="chat-avatar user">你</div>
+        <div>
+          <div class="chat-bubble user-bubble">
+            请基于以下数据，帮我写一段给管理层看的报告正文（中文，正式公文风格）：<br><br>
+            - HK市场24-25年10月重复发奖2,013条<br>
+            - 涉及金额约20万港币<br>
+            - 每月较为平均，无明显改善趋势<br>
+            - 根本原因：系统规则漏洞+人工核实漏洞+缺少事后检查<br>
+            - KOL渠道另有互斥发奖73人
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="callout callout-tip">
+      <strong>AI辅助写报告的正确姿势</strong>
+      • 先提供原始数据和关键结论，让AI生成初稿<br>
+      • <b>你来审核事实准确性</b>（AI可能编造数据！）<br>
+      • 你来补充专业判断和建议<br>
+      • AI再帮你润色措辞和格式<br>
+      • 还可以让AI帮你调整风格：把"公文风格"换成"周报风格""汇报PPT要点"等
+    </div>
+  </div>
+
+  <!-- Case 5.3 -->
+  <div class="phase post">
+    <h3><span class="badge badge-green">案例 11</span> 让AI帮你制作培训材料（Meta案例）</h3>
+    <p>没错，你现在看到的这份培训材料，也是用 Cursor + AI 制作的。从提纲设计到HTML生成，全程AI辅助。这说明AI不只能帮你做技术工作，文档类、展示类的输出也完全可以。</p>
+  </div>
+</div>
+
+<!-- ==================== SECTION 6: 注意事项 ==================== -->
+<div class="section" id="s6">
+  <div class="section-header">
+    <div class="num">7</div>
+    <h2>使用原则与注意事项</h2>
+  </div>
+
+  <div class="phase">
+    <h3>提示词（Prompt）的黄金法则</h3>
+    <table>
+      <tr><th style="width:30%;">法则</th><th>说明</th><th style="width:30%;">示例</th></tr>
+      <tr>
+        <td><b>1. 给背景</b></td>
+        <td>告诉AI你的角色和目的</td>
+        <td>"我是内审人员，需要检查重复发奖"</td>
+      </tr>
+      <tr>
+        <td><b>2. 喂上下文</b></td>
+        <td>用 @ 引用数据字典、现有SQL</td>
+        <td>"@数据字典.md @活动统计.sql"</td>
+      </tr>
+      <tr>
+        <td><b>3. 说具体</b></td>
+        <td>给出表名、字段名、筛选条件</td>
+        <td>"发奖表是 bi_inter.hk_prize_order_info_df，user_id关联员工表的uid"</td>
+      </tr>
+      <tr>
+        <td><b>4. 分步走</b></td>
+        <td>先提核心需求，再逐步追加</td>
+        <td>先写基础查询 → 追加标签 → 追加排序</td>
+      </tr>
+      <tr>
+        <td><b>5. 要验证</b></td>
+        <td>AI输出后，检查逻辑是否正确</td>
+        <td>先用小数据集测试SQL，确认结果合理</td>
+      </tr>
+    </table>
+  </div>
+
+  <div class="phase" style="border-left-color: var(--danger);">
+    <h3 style="color: var(--danger);">必须牢记的红线</h3>
+
+    <div class="callout callout-danger">
+      <strong>1. 数据安全（公司有明确规定）</strong>
+      根据公司AI编程安全规范，以下内容<b>禁止</b>进入AI平台：<br>
+      　• 加密密钥、认证凭证、数据库连接字符串<br>
+      　• 包含风控策略数据的代码<br>
+      　• 鉴权验票、密码解析逻辑<br>
+      　• 虚拟币业务和银行业务代码<br>
+      <b>简单记忆：代码可以给AI看，但密钥、密码、风控数据绝对不行。</b>
+    </div>
+
+    <div class="callout callout-danger">
+      <strong>2. AI会"一本正经地胡说"</strong>
+      AI可能生成语法正确但逻辑错误的SQL，可能编造不存在的表名和字段名，可能在报告中虚构数据。<b>所有AI输出必须经过人工验证。</b>
+    </div>
+
+    <div class="callout callout-danger">
+      <strong>3. 专业判断不能外包</strong>
+      AI可以帮你分析数据、发现异常，但结论、风险判断、改善建议的最终决定权在你手中。AI是工具，不是决策者。
+    </div>
+
+    <div class="callout callout-danger">
+      <strong>4. 不要盲目信任"看起来很专业"的输出</strong>
+      AI越是输出格式工整、措辞专业的内容，越容易让人放松警惕。始终保持专业怀疑态度。
+    </div>
+  </div>
+
+  <div class="phase">
+    <h3>推荐的工作流程</h3>
+    <div class="steps">
+      <div class="step">
+        <b>明确需求</b> — 在动手之前，先想清楚"我要查什么、为什么查、期望看到什么结果"
+      </div>
+      <div class="step">
+        <b>准备上下文</b> — 整理好数据字典、表结构、现有SQL等参考材料，放在项目目录里
+      </div>
+      <div class="step">
+        <b>向AI提需求</b> — 用自然语言描述，附上 @ 引用，先给核心需求
+      </div>
+      <div class="step">
+        <b>审核AI输出</b> — 检查SQL逻辑、字段名、筛选条件是否正确
+      </div>
+      <div class="step">
+        <b>小范围测试</b> — 加 LIMIT 100 先跑一下，看结果是否符合预期
+      </div>
+      <div class="step">
+        <b>迭代完善</b> — 根据测试结果，向AI提出修改要求，反复迭代直到满意
+      </div>
+      <div class="step">
+        <b>保存和归档</b> — 将最终SQL存入项目对应目录，结果导出CSV保存
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== 总结 ==================== -->
+<div class="section">
+  <div class="phase" style="background: linear-gradient(135deg, #eff6ff, #f0fdf4); border-left-color: var(--primary);">
+    <h3>总结：你今天学到了什么</h3>
+    <table>
+      <tr><th>项目阶段</th><th>AI能帮你做什么</th><th>你负责什么</th></tr>
+      <tr>
+        <td><span class="badge badge-blue">前期</span></td>
+        <td>梳理工作思路、理解数据结构、组织文件结构</td>
+        <td>确认框架合理性、补充业务经验</td>
+      </tr>
+      <tr>
+        <td><span class="badge badge-amber">中期</span></td>
+        <td>编写SQL查询、迭代优化、数据处理Python脚本</td>
+        <td>验证逻辑和结果的正确性</td>
+      </tr>
+      <tr>
+        <td><span class="badge badge-green">后期</span></td>
+        <td>归纳发现、起草报告段落、制作展示材料</td>
+        <td>审核事实准确性、做出专业判断</td>
+      </tr>
+    </table>
+    <br>
+    <p style="text-align:center; font-size: 1.1em; color: var(--primary); font-weight: 600;">
+      AI负责"跑腿"，你负责"动脑" — 这才是正确的人机协作方式。
+    </p>
+  </div>
+</div>
+
+<!-- ==================== 进阶功能 ==================== -->
+<div class="section" id="s7">
+  <div class="section-header">
+    <div class="num">8</div>
+    <h2>进阶功能 — MCP与Skills扩展</h2>
+  </div>
+
+  <p>除了基本的对话和代码生成，Cursor还支持两种强大的扩展机制，让AI能直接<b>连接外部系统</b>和<b>学习特定技能</b>。</p>
+
+  <!-- MCP -->
+  <div class="phase mid">
+    <h3><span class="badge badge-amber">MCP</span> Model Context Protocol — 让AI直接操作外部工具</h3>
+    <p>MCP（模型上下文协议）是一种标准化协议，让Cursor的AI能直接调用外部服务的API。简单来说，<b>装了MCP就像给AI装了一个"手"</b>，它不再只是给你建议，而是能直接帮你操作。</p>
+
+    <h4>飞书MCP — 我们最常用的例子</h4>
+    <p>配置飞书MCP后，AI可以直接：</p>
+    <table>
+      <tr><th style="width:25%;">能力</th><th>你对AI说</th><th>AI会做什么</th></tr>
+      <tr>
+        <td><b>读取飞书文档</b></td>
+        <td>"帮我读一下这个飞书文档的内容并总结"<br><span style="color:var(--muted);font-size:0.85em;">（附上飞书链接）</span></td>
+        <td>调用飞书API读取文档全文，返回结构化内容和摘要</td>
+      </tr>
+      <tr>
+        <td><b>搜索飞书文档</b></td>
+        <td>"帮我在飞书里搜一下关于Cursor使用指引的文档"</td>
+        <td>调用飞书搜索API，返回相关文档列表和链接</td>
+      </tr>
+      <tr>
+        <td><b>创建飞书文档</b></td>
+        <td>"把这份分析报告的内容发布为一篇飞书文档"</td>
+        <td>将Markdown内容转为飞书文档并创建，返回文档链接</td>
+      </tr>
+      <tr>
+        <td><b>发送飞书消息</b></td>
+        <td>"把这段总结发到xxx群里"</td>
+        <td>调用飞书消息API，将内容发送到指定群聊</td>
+      </tr>
+    </table>
+
+    <h4>如何配置飞书MCP</h4>
+    <div class="steps">
+      <div class="step">
+        <b>Step 1：</b>打开Cursor设置（<span class="inline-code">Ctrl+Shift+J</span> 或菜单 <span class="inline-code">File → Preferences → Cursor Settings</span>）
+      </div>
+      <div class="step">
+        <b>Step 2：</b>找到 <span class="inline-code">MCP</span> 标签页，点击 <span class="inline-code">Add new MCP server</span>
+      </div>
+      <div class="step">
+        <b>Step 3：</b>选择 <span class="inline-code">Type: SSE</span>，填入飞书MCP的服务地址（请参考公司内部MCP配置文档）
+      </div>
+      <div class="step">
+        <b>Step 4：</b>保存后，在MCP列表中看到绿色状态灯即表示连接成功
+      </div>
+    </div>
+
+    <h4>实际案例：用飞书MCP辅助审计工作</h4>
+    <div class="chat">
+      <div class="chat-msg">
+        <div class="chat-avatar user">你</div>
+        <div>
+          <div class="chat-label">你对AI说：</div>
+          <div class="chat-bubble user-bubble">
+            请帮我在飞书上搜索关于"Cursor 账号申请"的文档，总结一下申请流程和注意事项
+          </div>
+        </div>
+      </div>
+      <div class="chat-msg">
+        <div class="chat-avatar ai">AI</div>
+        <div>
+          <div class="chat-label">AI回复：</div>
+          <div class="chat-bubble">
+            <span style="color:var(--muted);font-size:0.85em;">[调用飞书MCP搜索 → 找到文档 → 调用读取API → 提取内容]</span><br><br>
+            找到了《富途 Cursor|Copilot 企业版账号使用和管理指引》，以下是申请流程：<br>
+            1. Cursor账号注册：访问 my.futuoa.com/form/apply/register_cursor，无需审批...<br>
+            2. 额度提升：如标准额度不够，可申请提升...<br>
+            3. 注意事项：不要在代码或对话中包含密钥、敏感数据...
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="chat" style="margin-top:16px;">
+      <div class="chat-msg">
+        <div class="chat-avatar user">你</div>
+        <div>
+          <div class="chat-label">你对AI说：</div>
+          <div class="chat-bubble user-bubble">
+            我刚才整理的审计发现汇总，帮我创建成一篇飞书文档，标题是"2025年奖励费用审计 — 关键发现汇总"
+          </div>
+        </div>
+      </div>
+      <div class="chat-msg">
+        <div class="chat-avatar ai">AI</div>
+        <div>
+          <div class="chat-label">AI回复：</div>
+          <div class="chat-bubble">
+            <span style="color:var(--muted);font-size:0.85em;">[调用飞书MCP创建文档]</span><br><br>
+            飞书文档已创建成功！<br>
+            链接：<span style="color:var(--primary);text-decoration:underline;">https://futu.feishu.cn/docx/xxx</span><br>
+            文档包含4个章节：项目背景、检测方法、异常发现汇总、建议措施。
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <h4>其他常见MCP</h4>
+    <table>
+      <tr><th>MCP类型</th><th>能力</th><th>使用场景</th></tr>
+      <tr><td>浏览器MCP</td><td>自动打开网页、截图、提取内容</td><td>测试前端页面、抓取网页数据</td></tr>
+      <tr><td>数据库MCP</td><td>直接连接数据库执行查询</td><td>在Cursor中直接查数据（无需切换工具）</td></tr>
+      <tr><td>地图MCP</td><td>调用地图API查询地理信息</td><td>门店地址校验、距离计算等</td></tr>
+      <tr><td>Git MCP</td><td>操作代码仓库</td><td>代码审查、版本管理</td></tr>
+    </table>
+  </div>
+
+  <!-- Skills -->
+  <div class="phase">
+    <h3><span class="badge badge-blue">Skills</span> 技能扩展 — 教AI学会特定操作</h3>
+    <p>Skills是Cursor的另一种扩展方式。如果说MCP是给AI装了"手"（连接外部系统），那Skills就是给AI装了"脑"（<b>教会它一套标准化的操作流程</b>）。</p>
+
+    <h4>Skills vs MCP 的区别</h4>
+    <table>
+      <tr><th style="width:20%;"></th><th style="width:40%;">MCP</th><th style="width:40%;">Skills</th></tr>
+      <tr><td><b>本质</b></td><td>连接外部服务的API</td><td>一组预写好的操作指引（Markdown文件）</td></tr>
+      <tr><td><b>类比</b></td><td>给AI装了一双"手"</td><td>给AI一本"操作手册"</td></tr>
+      <tr><td><b>触发方式</b></td><td>AI判断需要时自动调用</td><td>匹配到关键词时自动激活</td></tr>
+      <tr><td><b>典型场景</b></td><td>读写飞书、操作数据库</td><td>读取Excel文件、创建特定格式的文档</td></tr>
+      <tr><td><b>配置难度</b></td><td>需要服务端地址和认证</td><td>只需写一个Markdown文件</td></tr>
+    </table>
+
+    <h4>实际例子：Excel读取Skill</h4>
+    <p>我们团队配置了一个"Excel读取"Skill，当你让AI读取xlsx文件时，它会自动使用预定义的Python脚本来解析Excel：</p>
+    <div class="chat">
+      <div class="chat-msg">
+        <div class="chat-avatar user">你</div>
+        <div>
+          <div class="chat-label">你对AI说：</div>
+          <div class="chat-bubble user-bubble">
+            @报表.xlsx 帮我看看这个Excel有哪些Sheet，每个Sheet大概什么内容
+          </div>
+        </div>
+      </div>
+      <div class="chat-msg">
+        <div class="chat-avatar ai">AI</div>
+        <div>
+          <div class="chat-label">AI回复：</div>
+          <div class="chat-bubble">
+            <span style="color:var(--muted);font-size:0.85em;">[自动触发xlsx-reader Skill → 运行解析脚本]</span><br><br>
+            该Excel共有3个Sheet：<br>
+            • <b>Sheet1 "汇总"</b>：120行 x 15列，包含各活动汇总数据...<br>
+            • <b>Sheet2 "明细"</b>：5,832行 x 22列，发奖逐笔明细...<br>
+            • <b>Sheet3 "参数"</b>：10行 x 6列，活动配置参数...
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <h4>如何创建自己的Skill</h4>
+    <p>在项目根目录的 <span class="inline-code">.cursor/skills/</span> 文件夹下创建一个 <span class="inline-code">SKILL.md</span> 文件即可。格式很简单：</p>
+    <div style="background:#1e293b; color:#e2e8f0; padding:16px; border-radius:8px; font-family:monospace; font-size:0.85em; line-height:1.6; overflow-x:auto;">
+      <span style="color:#94a3b8;">---</span><br>
+      <span style="color:#7dd3fc;">name</span>: my-skill<br>
+      <span style="color:#7dd3fc;">description</span>: <span style="color:#a5f3fc;">"当用户需要xxx时触发此技能"</span><br>
+      <span style="color:#94a3b8;">---</span><br><br>
+      <span style="color:#94a3b8;"># 技能名称</span><br>
+      在这里写详细的操作步骤和指引...<br>
+      AI会按照这些步骤来执行操作。
+    </div>
+  </div>
+
+  <div class="callout callout-tip">
+    <strong>小结：MCP和Skills让Cursor不只是"聊天机器人"</strong><br>
+    • <b>MCP</b> = AI能直接操作飞书、数据库等外部系统 → 减少你在多个工具间切换的时间<br>
+    • <b>Skills</b> = AI学会了团队的标准操作 → 保证每次执行的一致性和准确性<br>
+    • 随着配置的MCP和Skills越多，Cursor就越像一个<b>"懂你们业务的全能助手"</b><br>
+    • 公司MCP配置相关指引：<a href="https://futu.feishu.cn/wiki/CLOgwjvhmizyhskg4lGcFyqKnnd" target="_blank">飞书文档</a>
+  </div>
+</div>
+
+<!-- ==================== 动手试试 ==================== -->
+<div class="section" id="s-practice">
+  <div class="section-header">
+    <div class="num" style="background:var(--accent);">★</div>
+    <h2>动手试试：用AI处理Excel数据</h2>
+  </div>
+
+  <div class="phase mid">
+    <h3><span class="badge badge-purple">实战练习</span> 用AI处理一个"真实"的数据分析任务</h3>
+    <p>我们准备了3个模拟数据文件（在培训材料同目录的 <span class="inline-code">练习数据/</span> 文件夹中），模拟一个常见的财务工作场景：<b>核对多个来源的奖励发放数据，找出异常</b>。</p>
+
+    <table>
+      <tr><th>文件</th><th>内容</th><th>行数</th></tr>
+      <tr><td><span class="inline-code">01_奖励发放明细.csv</span></td><td>3个月的奖励发放流水：用户ID、活动名称、奖品、金额、发放日期、状态等</td><td>200条</td></tr>
+      <tr><td><span class="inline-code">02_用户渠道信息.csv</span></td><td>用户的渠道归属：用户ID、一级渠道、二级渠道、注册日期、开户日期等</td><td>150条</td></tr>
+      <tr><td><span class="inline-code">03_活动预算表.csv</span></td><td>各活动的预算上限和规则：活动名称、预算金额、单人上限、互斥规则等</td><td>8条</td></tr>
+    </table>
+
+    <div class="dl-group">
+      <button class="dl-btn" onclick="downloadCSV('file1')"><span class="dl-icon">⬇</span> 下载 01_奖励发放明细.csv</button>
+      <button class="dl-btn" onclick="downloadCSV('file2')"><span class="dl-icon">⬇</span> 下载 02_用户渠道信息.csv</button>
+      <button class="dl-btn" onclick="downloadCSV('file3')"><span class="dl-icon">⬇</span> 下载 03_活动预算表.csv</button>
+      <button class="dl-btn" onclick="downloadCSV('all')" style="background:var(--success);"><span class="dl-icon">📦</span> 一键下载全部（ZIP）</button>
+      <button class="preview-btn" onclick="togglePreview()">👁 预览数据（前5行）</button>
+    </div>
+    <div class="preview-panel" id="data-preview"></div>
+
+    <h4>你的任务：一个Prompt，搞定全部分析</h4>
+    <p>打开Cursor，用 <span class="inline-code">文件 → 打开文件夹</span> 打开 <span class="inline-code">练习数据/</span> 文件夹。<br>
+    然后，把下面这段话<b>一次性</b>发给AI：</p>
+
+    <div class="chat">
+      <div class="chat-msg">
+        <div class="chat-avatar user">你</div>
+        <div>
+          <div class="chat-label">复制以下内容发给AI：</div>
+          <div class="chat-bubble user-bubble">
+            @01_奖励发放明细.csv @02_用户渠道信息.csv @03_活动预算表.csv<br><br>
+            这是我们公司的奖励发放数据。请帮我写一个Python脚本，一次性完成以下所有分析，并输出一个格式美观的Excel报告（文件名：分析报告.xlsx）：<br><br>
+            <b>Sheet1 - 数据概览：</b>每个文件的行列数、各金额字段的合计/均值/最大值统计<br>
+            <b>Sheet2 - 渠道分析：</b>关联发放明细和用户渠道，统计每个一级渠道的发奖总额、人数、人均金额，按金额降序排列<br>
+            <b>Sheet3 - 异常检测：</b>自动检查以下5种异常并标注类型：<br>
+            &nbsp;&nbsp;① 同一用户在同一活动重复领奖<br>
+            &nbsp;&nbsp;② 用户单人累计领取金额超过活动单人上限<br>
+            &nbsp;&nbsp;③ 用户同时参与了互斥活动（参考预算表的互斥规则）<br>
+            &nbsp;&nbsp;④ 核销金额大于发放金额的异常记录<br>
+            &nbsp;&nbsp;⑤ 人工发奖中单笔金额≥5000的高额记录<br>
+            <b>Sheet4 - 预算对比：</b>各活动的预算金额 vs 实际发放金额 vs 剩余预算，超预算的标红<br>
+            <b>Sheet5 - 异常汇总看板：</b>每种异常的数量和涉及金额汇总表<br><br>
+            要求：<br>
+            • Excel中数字列右对齐，金额列带千分位<br>
+            • 表头加粗加底色，异常行用红色底色高亮<br>
+            • 每个Sheet加自动列宽<br>
+            • 在Sheet5底部加一行"分析结论"，用文字概括主要发现
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <h4 style="margin-top:28px;">为什么这个任务用Excel很难做？</h4>
+    <table>
+      <tr><th style="width:35%;">分析项</th><th>Excel手工做法</th><th>AI一键做法</th></tr>
+      <tr>
+        <td>3表关联 + 渠道统计</td>
+        <td>VLOOKUP关联 → 透视表 → 手动排序（~15min）</td>
+        <td rowspan="5" style="vertical-align:middle; text-align:center; background:#f0fdf4; font-size:1.1em;">
+          <b>1个Prompt<br>≈ 2分钟</b><br><br>
+          AI自动生成脚本<br>自动运行<br>自动输出格式化Excel
+        </td>
+      </tr>
+      <tr>
+        <td>重复领奖检查</td>
+        <td>COUNTIFS + 条件格式/筛选（~10min）</td>
+      </tr>
+      <tr>
+        <td>互斥活动交叉检查</td>
+        <td>需要手写复杂嵌套公式解析互斥规则（~20min，且易出错）</td>
+      </tr>
+      <tr>
+        <td>5种异常统一汇总</td>
+        <td>每种异常单独做 → 手动汇总到一张表（~20min）</td>
+      </tr>
+      <tr>
+        <td>格式化多Sheet报告</td>
+        <td>逐个Sheet设格式、列宽、条件格式（~15min）</td>
+      </tr>
+      <tr style="font-weight:bold; background:#fef3c7;">
+        <td>合计</td>
+        <td>1~1.5小时（还可能遗漏或公式出错）</td>
+        <td style="text-align:center; color:var(--success);">2~5分钟（可反复运行，零出错）</td>
+      </tr>
+    </table>
+
+    <h4 style="margin-top:28px;">进阶挑战：改规则，重新跑</h4>
+    <p>报告生成后，试试对AI说：</p>
+    <div class="chat">
+      <div class="chat-msg">
+        <div class="chat-avatar user">你</div>
+        <div>
+          <div class="chat-bubble user-bubble">
+            规则变更：现在KOL渠道专属奖励的单人上限从1500调整为1000，并且和转仓奖励活动也变成互斥关系了。请修改脚本重新跑一遍，对比前后的异常数量变化。
+          </div>
+        </div>
+      </div>
+    </div>
+    <p style="margin-top:12px;">想象一下，如果用Excel，规则一变你需要改多少个公式和筛选条件？<br>
+    而用AI，<b>一句话描述变更 → 脚本自动修改 → 秒出新报告</b>。这就是真正的提效。</p>
+
+    <h4 style="margin-top:28px;">终极挑战：下个月数据来了</h4>
+    <p>你还可以继续对AI说：</p>
+    <div class="chat">
+      <div class="chat-msg">
+        <div class="chat-avatar user">你</div>
+        <div>
+          <div class="chat-bubble user-bubble">
+            这个脚本以后每个月都要用。请把它改造成：只需要替换3个CSV文件，运行一下就能自动生成当月的分析报告，不需要改任何代码。
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="callout callout-tip">
+      <strong>这个练习的核心体会</strong><br>
+      • 单个小任务（查重复、做透视表）Excel确实能做，但<b>5项分析 + 格式化报告 + 可复用</b>，Excel就力不从心了<br>
+      • AI的优势不是"替代Excel的某个功能"，而是<b>把整个工作流程自动化</b>——从原始数据到可交付成果，一步到位<br>
+      • 你完全不需要懂Python，只需要<b>清楚地描述你要什么</b>，AI会帮你实现<br>
+      • 脚本写一次，<b>每个月复用</b>，长期来看节省的时间是指数级的
+    </div>
+  </div>
+</div>
+
+<!-- ==================== 附录 ==================== -->
+<div class="section">
+  <div class="section-header">
+    <div class="num" style="background:var(--muted);">附</div>
+    <h2>附录：公司资源链接汇总</h2>
+  </div>
+
+  <div class="phase">
+    <table>
+      <tr><th style="width:35%;">资源</th><th>链接</th></tr>
+      <tr><td><b>Cursor 账号申请</b>（无需审批）</td><td><a href="https://my.futuoa.com/form/apply/register_cursor" target="_blank">my.futuoa.com/form/apply/register_cursor</a></td></tr>
+      <tr><td>Cursor 额度提升申请</td><td><a href="https://my.futuoa.com/form/apply/update_cursor_quota" target="_blank">my.futuoa.com/form/apply/update_cursor_quota</a></td></tr>
+      <tr><td>Cursor/Copilot 完整使用指引</td><td><a href="https://futu.feishu.cn/docx/JMHDd5luQohYQGx380IcPxw2nFk" target="_blank">飞书文档</a></td></tr>
+      <tr><td>Cursor 用量查询</td><td><a href="https://cursor.com/cn/dashboard?tab=usage" target="_blank">cursor.com/dashboard</a></td></tr>
+      <tr><td><b>FDS 数据平台</b>（国内大中台）</td><td><a href="https://cnfds.futuoa.com" target="_blank">cnfds.futuoa.com</a></td></tr>
+      <tr><td>FDS 产品概述</td><td><a href="https://futu.feishu.cn/wiki/KfUIwNdIhiF98xk4sXscUpHjnmh" target="_blank">飞书文档</a></td></tr>
+      <tr><td>FDS SQL查询操作指引</td><td><a href="https://futu.feishu.cn/wiki/EshnwzwkFi6udvkpS3AcwVBBnpb" target="_blank">飞书文档</a></td></tr>
+      <tr><td>FDS 权限申请指引</td><td><a href="https://futu.feishu.cn/wiki/BJoNwhUSliQtfkkR4BgcEzmvnPg" target="_blank">飞书文档</a></td></tr>
+      <tr><td><b>Cursor MCP 配置指引</b></td><td><a href="https://futu.feishu.cn/wiki/CLOgwjvhmizyhskg4lGcFyqKnnd" target="_blank">飞书文档</a></td></tr>
+    </table>
+  </div>
+</div>
+
+<!-- ==================== FOOTER ==================== -->
+<div class="footer">
+  集团连续审计组 | AI工具实战培训 | 2026年3月<br>
+  <span style="font-size:0.8em;">本材料使用 Cursor + AI 辅助制作，仅供内部培训使用</span>
+</div>
+
+</div>
+
+<script>
+const csvData = {
+  file1: {
+    name: '01_奖励发放明细.csv',
+    content: `订单ID,用户ID,活动名称,活动标识,奖品名称,发放金额_HKD,核销金额_HKD,发放日期,发放状态,发放方式,操作人
+ORD10130,U000148,裂变推荐官奖励,REFERRAL_2025,基金红包,3000,0,2025-02-23,已作废,人工发奖,
+ORD10051,U000012,裂变推荐官奖励,REFERRAL_2025,基金红包,1000,1000,2025-01-08,已核销,规则发奖,
+ORD10034,U000034,新客入金奖励2025Q2,NUP_2025Q2,基金红包,800,0,2025-03-25,已过期,API发奖,
+ORD10169,U000060,新客入金奖励2025Q1,NUP_2025Q1,现金券,800,800,2025-01-13,已核销,API发奖,
+ORD10159,U000121,新客入金奖励2025Q2,NUP_2025Q2,股票券,500,0,2025-01-02,待使用,规则发奖,
+ORD10092,U000147,入金满额加码,TOPUP_2025,基金红包,1500,0,2025-03-14,已作废,人工发奖,
+ORD10164,U000147,新客入金奖励2025Q1,NUP_2025Q1,股票券,300,300,2025-01-01,已核销,API发奖,
+ORD10145,U000082,KOL渠道专属奖励,KOL_2025,免佣卡,1000,0,2025-03-18,待使用,人工发奖,
+ORD10002,U000129,入金满额加码,TOPUP_2025,现金券,1500,0,2025-01-21,待使用,规则发奖,
+ORD10161,U000023,新客入金奖励2025Q1,NUP_2025Q1,现金券,500,500,2025-01-27,已核销,API发奖,
+ORD10037,U000037,转仓奖励活动,TRANSFER_2025,现金券,2000,2000,2025-05-23,已核销,规则发奖,王五
+ORD10135,U000025,新客入金奖励2025Q1,NUP_2025Q1,基金红包,800,0,2025-04-09,已作废,API发奖,
+ORD10057,U000096,KOL渠道专属奖励,KOL_2025,免佣卡,1500,0,2025-01-16,待使用,API发奖,
+ORD10132,U000019,新客入金奖励2025Q1,NUP_2025Q1,基金红包,500,500,2025-04-23,已核销,规则发奖,
+ORD10048,U000045,新客入金奖励2025Q2,NUP_2025Q2,免佣卡,300,300,2025-02-03,已核销,API发奖,
+ORD10131,U000128,裂变推荐官奖励,REFERRAL_2025,股票券,3000,3000,2025-03-19,已核销,规则发奖,
+ORD10015,U000130,裂变推荐官奖励,REFERRAL_2025,免佣卡,5000,5000,2025-01-01,已核销,人工发奖,
+ORD10148,U000149,转仓奖励活动,TRANSFER_2025,股票券,500,500,2025-05-30,已核销,人工发奖,
+ORD10010,U000125,新客入金奖励2025Q2,NUP_2025Q2,股票券,300,0,2025-03-03,已过期,API发奖,
+ORD10011,U000142,春节特别活动,CNY_2025,现金券,200,0,2025-02-27,已作废,规则发奖,
+ORD10120,U000114,新客入金奖励2025Q2,NUP_2025Q2,现金券,800,0,2025-03-30,已过期,人工发奖,
+ORD10126,U000015,新客入金奖励2025Q2,NUP_2025Q2,股票券,1800,1800,2025-02-09,已核销,API发奖,
+ORD10160,U000122,入金满额加码,TOPUP_2025,免佣卡,500,500,2025-03-15,已核销,API发奖,
+ORD10088,U000055,老客回馈活动,LOYALTY_2025,股票券,500,500,2025-02-19,已核销,API发奖,张三
+ORD10027,U000118,裂变推荐官奖励,REFERRAL_2025,基金红包,3000,0,2025-01-03,已作废,API发奖,
+ORD10086,U000101,KOL渠道专属奖励,KOL_2025,基金红包,1500,1500,2025-01-22,已核销,API发奖,
+ORD10116,U000096,入金满额加码,TOPUP_2025,免佣卡,300,300,2025-05-27,已核销,规则发奖,
+ORD10147,U000029,春节特别活动,CNY_2025,基金红包,800,0,2025-01-07,待使用,API发奖,
+ORD10185,U000003,老客回馈活动,LOYALTY_2025,现金券,1200,2000,2025-04-13,已核销,人工发奖,李四
+ORD10078,U000071,新客入金奖励2025Q1,NUP_2025Q1,免佣卡,800,800,2025-05-10,已核销,规则发奖,
+ORD10194,U000056,新客入金奖励2025Q2,NUP_2025Q2,股票券,500,500,2025-05-04,已核销,API发奖,
+ORD10174,U000010,新客入金奖励2025Q1,NUP_2025Q1,股票券,500,500,2025-02-09,已核销,API发奖,
+ORD10043,U000072,新客入金奖励2025Q1,NUP_2025Q1,基金红包,800,800,2025-02-25,已核销,API发奖,
+ORD10127,U000058,老客回馈活动,LOYALTY_2025,现金券,800,0,2025-03-14,已作废,API发奖,
+ORD10158,U000062,转仓奖励活动,TRANSFER_2025,股票券,500,500,2025-05-16,已核销,API发奖,李四
+ORD10080,U000099,入金满额加码,TOPUP_2025,现金券,2500,0,2025-05-22,已作废,规则发奖,
+ORD10075,U000038,转仓奖励活动,TRANSFER_2025,股票券,500,500,2025-02-07,已核销,API发奖,
+ORD10146,U000137,入金满额加码,TOPUP_2025,现金券,2500,2500,2025-03-18,已核销,API发奖,
+ORD10129,U000149,KOL渠道专属奖励,KOL_2025,现金券,400,0,2025-03-28,已作废,API发奖,王五
+ORD10168,U000060,新客入金奖励2025Q1,NUP_2025Q1,股票券,500,500,2025-02-24,已核销,API发奖,
+ORD10124,U000123,春节特别活动,CNY_2025,股票券,1000,1000,2025-05-28,已核销,API发奖,
+ORD10155,U000140,春节特别活动,CNY_2025,股票券,1000,0,2025-03-30,已作废,API发奖,王五
+ORD10052,U000028,入金满额加码,TOPUP_2025,免佣卡,1500,1500,2025-01-19,已核销,人工发奖,张三
+ORD10154,U000054,入金满额加码,TOPUP_2025,免佣卡,1000,1000,2025-05-03,已核销,API发奖,王五
+ORD10003,U000065,新客入金奖励2025Q1,NUP_2025Q1,现金券,300,0,2025-02-28,已过期,API发奖,
+ORD10084,U000014,老客回馈活动,LOYALTY_2025,基金红包,100,100,2025-03-26,已核销,API发奖,
+ORD10176,U000023,新客入金奖励2025Q1,NUP_2025Q1,现金券,500,500,2025-02-16,已核销,API发奖,
+ORD10044,U000026,老客回馈活动,LOYALTY_2025,基金红包,800,800,2025-04-02,已核销,API发奖,
+ORD10025,U000111,KOL渠道专属奖励,KOL_2025,股票券,400,400,2025-05-16,已核销,API发奖,
+ORD10197,U000064,新客入金奖励2025Q2,NUP_2025Q2,股票券,500,500,2025-05-07,已核销,API发奖,
+ORD10004,U000045,入金满额加码,TOPUP_2025,股票券,2500,2500,2025-04-24,已核销,人工发奖,
+ORD10133,U000037,老客回馈活动,LOYALTY_2025,股票券,300,300,2025-03-30,已核销,API发奖,
+ORD10179,U000103,KOL渠道专属奖励,KOL_2025,现金券,600,600,2025-02-13,已核销,API发奖,
+ORD10167,U000060,新客入金奖励2025Q1,NUP_2025Q1,股票券,1800,1800,2025-02-03,已核销,API发奖,
+ORD10150,U000108,KOL渠道专属奖励,KOL_2025,基金红包,1000,1000,2025-02-22,已核销,API发奖,
+ORD10112,U000110,KOL渠道专属奖励,KOL_2025,现金券,1000,1000,2025-03-31,已核销,API发奖,
+ORD10091,U000115,转仓奖励活动,TRANSFER_2025,基金红包,3000,3000,2025-03-03,已核销,API发奖,
+ORD10073,U000103,新客入金奖励2025Q2,NUP_2025Q2,免佣卡,1200,0,2025-03-21,已过期,API发奖,
+ORD10157,U000138,裂变推荐官奖励,REFERRAL_2025,现金券,2000,2000,2025-03-11,已核销,人工发奖,
+ORD10141,U000093,裂变推荐官奖励,REFERRAL_2025,基金红包,100,0,2025-04-09,待使用,人工发奖,
+ORD10022,U000137,春节特别活动,CNY_2025,现金券,800,0,2025-05-05,已作废,人工发奖,王五
+ORD10014,U000131,KOL渠道专属奖励,KOL_2025,基金红包,200,0,2025-03-12,已作废,API发奖,
+ORD10187,U000093,老客回馈活动,LOYALTY_2025,现金券,1200,1200,2025-03-31,已核销,人工发奖,张三
+ORD10032,U000074,转仓奖励活动,TRANSFER_2025,股票券,3000,3000,2025-04-01,已核销,人工发奖,
+ORD10050,U000122,入金满额加码,TOPUP_2025,现金券,1000,0,2025-05-12,待使用,规则发奖,
+ORD10183,U000048,KOL渠道专属奖励,KOL_2025,现金券,1500,1500,2025-02-24,已核销,API发奖,
+ORD10082,U000088,新客入金奖励2025Q2,NUP_2025Q2,股票券,1800,1800,2025-02-14,已核销,规则发奖,
+ORD10093,U000042,转仓奖励活动,TRANSFER_2025,免佣卡,3000,0,2025-02-05,已作废,API发奖,
+ORD10151,U000133,转仓奖励活动,TRANSFER_2025,基金红包,3000,0,2025-03-25,已过期,人工发奖,
+ORD10128,U000142,裂变推荐官奖励,REFERRAL_2025,现金券,200,0,2025-03-19,待使用,人工发奖,
+ORD10153,U000050,转仓奖励活动,TRANSFER_2025,股票券,1500,1500,2025-05-23,已核销,API发奖,
+ORD10201,U000015,裂变推荐官奖励,REFERRAL_2025,现金券,10000,5000,2025-05-05,已核销,人工发奖,王五
+ORD10198,U000147,裂变推荐官奖励,REFERRAL_2025,现金券,12000,5000,2025-03-22,已核销,人工发奖,王五
+ORD10107,U000080,春节特别活动,CNY_2025,股票券,1000,1000,2025-03-06,已核销,API发奖,
+ORD10061,U000069,新客入金奖励2025Q1,NUP_2025Q1,免佣卡,500,0,2025-03-11,已过期,API发奖,
+ORD10069,U000045,KOL渠道专属奖励,KOL_2025,股票券,1000,0,2025-05-17,已过期,人工发奖,
+ORD10024,U000077,新客入金奖励2025Q1,NUP_2025Q1,现金券,300,0,2025-03-25,已作废,API发奖,
+ORD10104,U000089,转仓奖励活动,TRANSFER_2025,免佣卡,500,0,2025-05-29,已过期,API发奖,王五
+ORD10123,U000142,KOL渠道专属奖励,KOL_2025,免佣卡,1500,1500,2025-01-23,已核销,规则发奖,
+ORD10020,U000113,新客入金奖励2025Q2,NUP_2025Q2,股票券,1800,1800,2025-04-27,已核销,规则发奖,
+ORD10162,U000023,新客入金奖励2025Q1,NUP_2025Q1,股票券,300,300,2025-02-23,已核销,API发奖,
+ORD10054,U000026,新客入金奖励2025Q2,NUP_2025Q2,基金红包,1800,1800,2025-02-25,已核销,API发奖,
+ORD10114,U000041,新客入金奖励2025Q1,NUP_2025Q1,股票券,500,500,2025-04-23,已核销,API发奖,
+ORD10068,U000036,裂变推荐官奖励,REFERRAL_2025,现金券,500,500,2025-03-25,已核销,规则发奖,
+ORD10144,U000086,入金满额加码,TOPUP_2025,股票券,2500,2500,2025-04-27,已核销,API发奖,
+ORD10083,U000135,KOL渠道专属奖励,KOL_2025,基金红包,600,600,2025-04-06,已核销,规则发奖,
+ORD10045,U000032,入金满额加码,TOPUP_2025,现金券,300,0,2025-02-24,已过期,API发奖,
+ORD10007,U000081,裂变推荐官奖励,REFERRAL_2025,基金红包,500,0,2025-01-30,已作废,人工发奖,
+ORD10193,U000056,新客入金奖励2025Q2,NUP_2025Q2,现金券,800,800,2025-04-12,已核销,API发奖,
+ORD10125,U000116,入金满额加码,TOPUP_2025,股票券,2500,2500,2025-03-30,已核销,API发奖,
+ORD10055,U000117,春节特别活动,CNY_2025,基金红包,1000,1000,2025-01-25,已核销,API发奖,
+ORD10110,U000133,裂变推荐官奖励,REFERRAL_2025,基金红包,5000,0,2025-01-22,已过期,API发奖,
+ORD10081,U000147,转仓奖励活动,TRANSFER_2025,股票券,1500,0,2025-05-02,待使用,API发奖,
+ORD10023,U000074,转仓奖励活动,TRANSFER_2025,现金券,500,500,2025-04-22,已核销,规则发奖,
+ORD10095,U000132,KOL渠道专属奖励,KOL_2025,基金红包,1000,1000,2025-01-24,已核销,API发奖,
+ORD10076,U000020,KOL渠道专属奖励,KOL_2025,基金红包,1000,0,2025-04-29,已作废,人工发奖,
+ORD10072,U000044,入金满额加码,TOPUP_2025,现金券,1000,1000,2025-01-23,已核销,API发奖,
+ORD10122,U000036,转仓奖励活动,TRANSFER_2025,免佣卡,2000,2000,2025-01-07,已核销,规则发奖,
+ORD10036,U000124,裂变推荐官奖励,REFERRAL_2025,现金券,3000,0,2025-03-28,已作废,规则发奖,
+ORD10106,U000010,裂变推荐官奖励,REFERRAL_2025,股票券,200,0,2025-01-12,已作废,API发奖,
+ORD10163,U000023,新客入金奖励2025Q1,NUP_2025Q1,股票券,1200,1200,2025-01-12,已核销,API发奖,
+ORD10143,U000037,转仓奖励活动,TRANSFER_2025,现金券,3000,3000,2025-05-11,已核销,API发奖,王五
+ORD10067,U000012,转仓奖励活动,TRANSFER_2025,股票券,2000,2000,2025-01-15,已核销,API发奖,
+ORD10085,U000039,老客回馈活动,LOYALTY_2025,股票券,100,0,2025-05-30,已过期,API发奖,
+ORD10192,U000056,新客入金奖励2025Q1,NUP_2025Q1,现金券,1800,1800,2025-02-23,已核销,API发奖,
+ORD10039,U000121,新客入金奖励2025Q1,NUP_2025Q1,股票券,1800,1800,2025-05-24,已核销,API发奖,
+ORD10177,U000023,KOL渠道专属奖励,KOL_2025,现金券,600,600,2025-03-02,已核销,API发奖,
+ORD10042,U000139,春节特别活动,CNY_2025,现金券,500,0,2025-04-17,已过期,规则发奖,
+ORD10117,U000072,转仓奖励活动,TRANSFER_2025,股票券,500,0,2025-01-07,已过期,规则发奖,
+ORD10087,U000135,新客入金奖励2025Q2,NUP_2025Q2,现金券,1200,1200,2025-05-11,已核销,API发奖,
+ORD10099,U000039,春节特别活动,CNY_2025,免佣卡,200,200,2025-03-15,已核销,API发奖,李四
+ORD10156,U000021,老客回馈活动,LOYALTY_2025,基金红包,500,0,2025-03-07,已过期,API发奖,
+ORD10134,U000028,老客回馈活动,LOYALTY_2025,免佣卡,200,200,2025-04-30,已核销,规则发奖,
+ORD10041,U000078,入金满额加码,TOPUP_2025,股票券,300,300,2025-01-25,已核销,规则发奖,
+ORD10181,U000025,KOL渠道专属奖励,KOL_2025,现金券,600,600,2025-03-03,已核销,API发奖,
+ORD10094,U000096,新客入金奖励2025Q2,NUP_2025Q2,现金券,1800,1800,2025-02-01,已核销,API发奖,
+ORD10188,U000061,老客回馈活动,LOYALTY_2025,现金券,2000,1500,2025-03-27,已核销,人工发奖,李四
+ORD10030,U000147,老客回馈活动,LOYALTY_2025,免佣卡,800,0,2025-03-17,已过期,API发奖,
+ORD10038,U000032,入金满额加码,TOPUP_2025,基金红包,1000,0,2025-03-09,待使用,API发奖,张三
+ORD10065,U000109,入金满额加码,TOPUP_2025,免佣卡,2500,2500,2025-04-24,已核销,API发奖,
+ORD10152,U000045,入金满额加码,TOPUP_2025,免佣卡,2500,0,2025-03-29,待使用,API发奖,
+ORD10008,U000001,入金满额加码,TOPUP_2025,免佣卡,1500,1500,2025-01-14,已核销,人工发奖,
+ORD10100,U000118,新客入金奖励2025Q2,NUP_2025Q2,现金券,300,0,2025-05-08,待使用,人工发奖,
+ORD10111,U000047,裂变推荐官奖励,REFERRAL_2025,免佣卡,500,500,2025-01-27,已核销,API发奖,
+ORD10170,U000137,新客入金奖励2025Q1,NUP_2025Q1,股票券,800,800,2025-01-11,已核销,API发奖,
+ORD10028,U000041,新客入金奖励2025Q2,NUP_2025Q2,免佣卡,1200,0,2025-03-30,待使用,规则发奖,
+ORD10070,U000091,新客入金奖励2025Q2,NUP_2025Q2,现金券,1200,1200,2025-01-11,已核销,规则发奖,
+ORD10060,U000147,转仓奖励活动,TRANSFER_2025,现金券,2000,0,2025-05-24,已作废,人工发奖,
+ORD10113,U000112,裂变推荐官奖励,REFERRAL_2025,基金红包,3000,3000,2025-01-15,已核销,API发奖,
+ORD10103,U000012,春节特别活动,CNY_2025,现金券,800,0,2025-03-06,已过期,API发奖,
+ORD10195,U000064,新客入金奖励2025Q1,NUP_2025Q1,现金券,300,300,2025-02-27,已核销,API发奖,
+ORD10063,U000056,春节特别活动,CNY_2025,股票券,1000,1000,2025-04-27,已核销,API发奖,
+ORD10013,U000121,转仓奖励活动,TRANSFER_2025,基金红包,2000,2000,2025-05-22,已核销,API发奖,
+ORD10172,U000137,新客入金奖励2025Q1,NUP_2025Q1,股票券,300,300,2025-02-17,已核销,API发奖,
+ORD10142,U000031,KOL渠道专属奖励,KOL_2025,免佣卡,200,200,2025-04-11,已核销,人工发奖,
+ORD10026,U000098,转仓奖励活动,TRANSFER_2025,股票券,2000,2000,2025-05-30,已核销,规则发奖,
+ORD10184,U000147,老客回馈活动,LOYALTY_2025,现金券,1000,1000,2025-03-30,已核销,人工发奖,李四
+ORD10053,U000071,老客回馈活动,LOYALTY_2025,基金红包,500,500,2025-05-16,已核销,人工发奖,
+ORD10062,U000047,KOL渠道专属奖励,KOL_2025,股票券,1500,1500,2025-04-13,已核销,API发奖,王五
+ORD10005,U000126,新客入金奖励2025Q2,NUP_2025Q2,免佣卡,1200,1200,2025-03-31,已核销,API发奖,
+ORD10175,U000010,新客入金奖励2025Q1,NUP_2025Q1,股票券,1200,1200,2025-02-02,已核销,API发奖,
+ORD10182,U000048,新客入金奖励2025Q1,NUP_2025Q1,现金券,800,800,2025-02-10,已核销,API发奖,
+ORD10029,U000117,裂变推荐官奖励,REFERRAL_2025,基金红包,200,0,2025-04-09,已作废,API发奖,
+ORD10049,U000005,KOL渠道专属奖励,KOL_2025,基金红包,600,600,2025-01-14,已核销,人工发奖,张三
+ORD10071,U000081,春节特别活动,CNY_2025,现金券,1000,1000,2025-04-17,已核销,规则发奖,李四
+ORD10040,U000119,裂变推荐官奖励,REFERRAL_2025,股票券,3000,3000,2025-04-15,已核销,API发奖,
+ORD10189,U000138,新客入金奖励2025Q1,NUP_2025Q1,现金券,1800,1800,2025-02-28,已核销,API发奖,
+ORD10118,U000144,新客入金奖励2025Q2,NUP_2025Q2,基金红包,800,0,2025-03-08,已过期,API发奖,
+ORD10064,U000084,新客入金奖励2025Q2,NUP_2025Q2,现金券,300,300,2025-02-09,已核销,API发奖,
+ORD10059,U000040,入金满额加码,TOPUP_2025,免佣卡,500,500,2025-01-28,已核销,API发奖,
+ORD10202,U000117,裂变推荐官奖励,REFERRAL_2025,现金券,12000,5000,2025-05-11,已核销,人工发奖,王五
+ORD10137,U000120,入金满额加码,TOPUP_2025,现金券,1000,1000,2025-05-08,已核销,规则发奖,
+ORD10190,U000138,新客入金奖励2025Q2,NUP_2025Q2,现金券,300,300,2025-04-26,已核销,API发奖,
+ORD10140,U000094,春节特别活动,CNY_2025,现金券,800,800,2025-01-12,已核销,人工发奖,
+ORD10119,U000074,入金满额加码,TOPUP_2025,现金券,500,500,2025-02-01,已核销,规则发奖,
+ORD10077,U000083,老客回馈活动,LOYALTY_2025,基金红包,200,200,2025-04-23,已核销,规则发奖,
+ORD10199,U000134,裂变推荐官奖励,REFERRAL_2025,现金券,10000,5000,2025-05-27,已核销,人工发奖,张三
+ORD10196,U000064,新客入金奖励2025Q2,NUP_2025Q2,现金券,1800,1800,2025-05-08,已核销,API发奖,
+ORD10058,U000109,新客入金奖励2025Q1,NUP_2025Q1,现金券,800,800,2025-03-21,已核销,人工发奖,
+ORD10033,U000036,新客入金奖励2025Q2,NUP_2025Q2,基金红包,300,0,2025-03-21,已作废,API发奖,
+ORD10136,U000041,老客回馈活动,LOYALTY_2025,股票券,800,800,2025-03-22,已核销,规则发奖,
+ORD10101,U000037,裂变推荐官奖励,REFERRAL_2025,免佣卡,1000,0,2025-01-01,待使用,API发奖,
+ORD10138,U000062,转仓奖励活动,TRANSFER_2025,现金券,3000,3000,2025-04-01,已核销,API发奖,
+ORD10046,U000063,KOL渠道专属奖励,KOL_2025,股票券,1500,1500,2025-02-22,已核销,人工发奖,
+ORD10031,U000102,裂变推荐官奖励,REFERRAL_2025,现金券,100,0,2025-05-25,已作废,人工发奖,
+ORD10090,U000043,入金满额加码,TOPUP_2025,股票券,300,300,2025-04-16,已核销,规则发奖,
+ORD10178,U000103,新客入金奖励2025Q1,NUP_2025Q1,现金券,500,500,2025-02-01,已核销,API发奖,
+ORD10200,U000150,裂变推荐官奖励,REFERRAL_2025,现金券,10000,5000,2025-05-05,已核销,人工发奖,王五
+ORD10021,U000040,新客入金奖励2025Q2,NUP_2025Q2,基金红包,1200,1200,2025-03-09,已核销,API发奖,
+ORD10171,U000137,新客入金奖励2025Q1,NUP_2025Q1,现金券,800,800,2025-02-15,已核销,API发奖,
+ORD10097,U000096,转仓奖励活动,TRANSFER_2025,免佣卡,500,500,2025-03-23,已核销,API发奖,李四
+ORD10115,U000094,老客回馈活动,LOYALTY_2025,股票券,500,500,2025-05-26,已核销,规则发奖,
+ORD10098,U000121,KOL渠道专属奖励,KOL_2025,现金券,1000,0,2025-04-25,待使用,API发奖,张三
+ORD10096,U000107,新客入金奖励2025Q1,NUP_2025Q1,股票券,1200,1200,2025-05-09,已核销,规则发奖,
+ORD10108,U000013,老客回馈活动,LOYALTY_2025,免佣卡,300,0,2025-02-01,已作废,规则发奖,
+ORD10166,U000147,新客入金奖励2025Q1,NUP_2025Q1,股票券,800,800,2025-01-19,已核销,API发奖,
+ORD10165,U000147,新客入金奖励2025Q1,NUP_2025Q1,现金券,1800,1800,2025-02-08,已核销,API发奖,
+ORD10035,U000139,老客回馈活动,LOYALTY_2025,股票券,800,800,2025-05-09,已核销,API发奖,
+ORD10047,U000060,老客回馈活动,LOYALTY_2025,股票券,200,200,2025-01-01,已核销,API发奖,
+ORD10105,U000087,KOL渠道专属奖励,KOL_2025,股票券,1000,0,2025-05-03,已过期,API发奖,李四
+ORD10074,U000044,新客入金奖励2025Q2,NUP_2025Q2,股票券,1800,0,2025-01-30,待使用,API发奖,
+ORD10009,U000114,新客入金奖励2025Q1,NUP_2025Q1,股票券,500,0,2025-03-10,待使用,API发奖,
+ORD10121,U000077,KOL渠道专属奖励,KOL_2025,股票券,400,0,2025-04-03,待使用,API发奖,
+ORD10018,U000060,春节特别活动,CNY_2025,基金红包,200,0,2025-03-23,已过期,规则发奖,
+ORD10016,U000126,KOL渠道专属奖励,KOL_2025,免佣卡,1000,1000,2025-05-18,已核销,API发奖,
+ORD10139,U000121,裂变推荐官奖励,REFERRAL_2025,现金券,2000,0,2025-01-03,已作废,规则发奖,李四
+ORD10017,U000140,春节特别活动,CNY_2025,股票券,1000,0,2025-03-24,已作废,API发奖,
+ORD10180,U000025,新客入金奖励2025Q1,NUP_2025Q1,现金券,500,500,2025-02-15,已核销,API发奖,
+ORD10089,U000130,新客入金奖励2025Q1,NUP_2025Q1,基金红包,800,0,2025-02-03,待使用,API发奖,
+ORD10109,U000113,春节特别活动,CNY_2025,基金红包,800,800,2025-02-17,已核销,API发奖,
+ORD10012,U000040,入金满额加码,TOPUP_2025,免佣卡,1000,0,2025-05-11,已过期,规则发奖,
+ORD10019,U000039,入金满额加码,TOPUP_2025,免佣卡,300,0,2025-02-02,待使用,API发奖,
+ORD10149,U000098,KOL渠道专属奖励,KOL_2025,现金券,400,0,2025-01-09,待使用,API发奖,李四
+ORD10056,U000096,KOL渠道专属奖励,KOL_2025,现金券,1000,1000,2025-01-18,已核销,API发奖,
+ORD10191,U000138,新客入金奖励2025Q2,NUP_2025Q2,股票券,500,500,2025-05-15,已核销,API发奖,
+ORD10001,U000146,裂变推荐官奖励,REFERRAL_2025,免佣卡,1000,1000,2025-02-01,已核销,规则发奖,
+ORD10066,U000030,老客回馈活动,LOYALTY_2025,基金红包,500,500,2025-01-29,已核销,人工发奖,
+ORD10102,U000048,新客入金奖励2025Q2,NUP_2025Q2,现金券,1800,1800,2025-04-03,已核销,规则发奖,
+ORD10006,U000042,老客回馈活动,LOYALTY_2025,基金红包,500,500,2025-05-07,已核销,人工发奖,张三
+ORD10186,U000067,老客回馈活动,LOYALTY_2025,现金券,1000,1500,2025-03-24,已核销,人工发奖,张三
+ORD10079,U000015,老客回馈活动,LOYALTY_2025,现金券,300,0,2025-01-20,已过期,人工发奖,
+ORD10173,U000010,新客入金奖励2025Q1,NUP_2025Q1,现金券,800,800,2025-02-06,已核销,API发奖,`
+  },
+  file2: {
+    name: '02_用户渠道信息.csv',
+    content: `用户ID,一级渠道,二级渠道,注册日期,开户日期,首次入金日期,是否私财客户,手机号归属地
+U000001,老客转介绍,自然裂变,2024-01-13,2024-02-05,2024-02-08,否,香港
+U000002,老客转介绍,自然裂变,2024-12-12,2025-01-04,2025-01-05,否,台湾
+U000003,线下地推,地推团队-华南,2024-01-16,2024-01-18,2024-01-26,否,台湾
+U000004,自然流量,品牌词,2024-04-11,2024-05-03,2024-05-11,否,大陆
+U000005,线上推广,抖音,2024-10-28,2024-11-05,2024-11-05,否,香港
+U000006,老客转介绍,推荐官活动,2024-06-23,2024-07-01,2024-07-13,否,香港
+U000007,自然流量,搜索引擎,2024-07-13,2024-07-16,2024-07-21,否,台湾
+U000008,KOL渠道,财经KOL-A,2025-01-08,2025-01-22,2025-02-05,否,大陆
+U000009,自然流量,品牌词,2024-05-30,2024-06-25,2024-07-09,否,香港
+U000010,实体店,旺角店,2024-12-26,2024-12-28,2024-12-31,是,香港
+U000011,自然流量,搜索引擎,2024-02-21,2024-03-04,2024-03-14,否,香港
+U000012,线上推广,Instagram,2024-06-30,2024-07-06,2024-07-17,否,新加坡
+U000013,老客转介绍,自然裂变,2024-11-07,2024-11-27,2024-12-08,否,香港
+U000014,线上推广,抖音,2024-07-13,2024-07-21,2024-07-31,否,新加坡
+U000015,实体店,旺角店,2024-12-16,2024-12-26,2025-01-07,否,香港
+U000016,线上推广,Facebook,2024-06-10,2024-06-22,2024-06-25,否,台湾
+U000017,老客转介绍,推荐官活动,2024-04-18,2024-05-08,2024-05-22,否,新加坡
+U000018,线下地推,地推团队-华南,2024-05-15,2024-05-19,2024-05-27,否,台湾
+U000019,KOL渠道,生活KOL-C,2024-10-26,2024-11-08,2024-11-14,否,香港
+U000020,线上推广,Google,2024-09-17,2024-10-02,2024-10-02,否,香港
+U000021,线上推广,Google,2024-12-14,2024-12-27,2025-01-02,否,大陆
+U000022,实体店,铜锣湾店,2024-09-27,2024-10-05,2024-10-18,否,香港
+U000023,老客转介绍,自然裂变,2024-12-15,2025-01-12,2025-01-16,否,新加坡
+U000024,KOL渠道,财经KOL-A,2024-05-30,2024-06-12,2024-06-12,否,新加坡
+U000025,老客转介绍,推荐官活动,2024-09-13,2024-10-07,2024-10-21,否,香港
+U000026,B端机构合作,银行合作,2024-11-23,2024-12-09,2024-12-11,否,香港
+U000027,B端机构合作,券商合作,2024-10-03,2024-11-02,2024-11-10,否,香港
+U000028,实体店,铜锣湾店,2024-09-07,2024-09-07,2024-09-12,否,香港
+U000029,线上推广,Facebook,2024-05-03,2024-05-31,2024-06-01,否,香港
+U000030,老客转介绍,推荐官活动,2024-02-05,2024-02-29,2024-03-02,否,香港
+U000031,老客转介绍,推荐官活动,2024-10-08,2024-10-13,2024-10-26,否,台湾
+U000032,线下地推,地推团队-华南,2024-10-03,2024-10-27,2024-10-30,否,新加坡
+U000033,KOL渠道,财经KOL-B,2024-12-09,2024-12-29,2025-01-12,否,台湾
+U000034,线下地推,地推团队-华南,2024-05-06,2024-05-13,2024-05-13,是,台湾
+U000035,实体店,旺角店,2024-10-28,2024-11-04,2024-11-15,是,新加坡
+U000036,自然流量,搜索引擎,2024-02-04,2024-03-03,2024-03-08,是,香港
+U000037,实体店,旺角店,2024-05-22,2024-06-12,2024-06-20,否,香港
+U000038,老客转介绍,推荐官活动,2024-05-04,2024-05-29,2024-06-04,否,香港
+U000039,自然流量,搜索引擎,2024-12-03,2024-12-16,2024-12-22,否,大陆
+U000040,B端机构合作,券商合作,2024-12-10,2024-12-30,2024-12-31,否,香港
+U000041,线下地推,地推团队-华东,2024-06-22,2024-07-17,2024-07-20,否,香港
+U000042,线上推广,抖音,2024-03-12,2024-03-25,2024-04-01,否,香港
+U000043,B端机构合作,券商合作,2024-08-14,2024-09-08,2024-09-16,否,香港
+U000044,自然流量,品牌词,2024-10-03,2024-10-29,2024-10-30,是,香港
+U000045,线上推广,抖音,2024-09-05,2024-09-20,2024-09-26,否,香港
+U000046,线上推广,抖音,2024-01-02,2024-01-14,2024-01-26,否,大陆
+U000047,KOL渠道,财经KOL-B,2024-12-22,2025-01-21,2025-02-02,否,台湾
+U000048,老客转介绍,推荐官活动,2024-03-20,2024-03-26,2024-03-26,否,台湾
+U000049,老客转介绍,自然裂变,2025-01-17,2025-01-27,2025-02-05,是,大陆
+U000050,实体店,尖沙咀店,2024-03-21,2024-03-22,2024-03-23,否,香港
+U000051,自然流量,品牌词,2024-02-04,2024-02-25,2024-03-02,否,香港
+U000052,实体店,旺角店,2024-10-23,2024-11-11,2024-11-12,是,大陆
+U000053,老客转介绍,推荐官活动,2024-05-13,2024-05-19,2024-05-24,否,香港
+U000054,KOL渠道,财经KOL-B,2024-03-08,2024-03-29,2024-04-05,否,香港
+U000055,B端机构合作,券商合作,2024-01-05,2024-01-19,2024-01-28,否,香港
+U000056,自然流量,品牌词,2024-04-19,2024-05-05,2024-05-19,否,香港
+U000057,自然流量,搜索引擎,2024-07-08,2024-07-17,2024-07-30,否,台湾
+U000058,老客转介绍,推荐官活动,2024-11-09,2024-12-04,2024-12-04,否,新加坡
+U000059,B端机构合作,银行合作,2024-12-05,2024-12-08,2024-12-10,否,香港
+U000060,自然流量,搜索引擎,2025-01-15,2025-02-01,2025-02-05,否,台湾
+U000061,线上推广,Instagram,2024-04-14,2024-05-05,2024-05-09,否,台湾
+U000062,线下地推,地推团队-华北,2024-01-27,2024-01-29,2024-02-11,否,香港
+U000063,自然流量,搜索引擎,2024-06-19,2024-07-13,2024-07-17,否,香港
+U000064,老客转介绍,推荐官活动,2024-10-09,2024-10-31,2024-10-31,否,香港
+U000065,自然流量,品牌词,2024-03-17,2024-04-03,2024-04-08,是,台湾
+U000066,实体店,旺角店,2024-08-08,2024-08-12,2024-08-17,是,香港
+U000067,KOL渠道,财经KOL-A,2024-12-15,2024-12-22,2024-12-27,否,台湾
+U000068,B端机构合作,银行合作,2024-11-13,2024-12-06,2024-12-20,否,香港
+U000069,B端机构合作,券商合作,2024-03-31,2024-04-28,2024-04-30,否,新加坡
+U000070,KOL渠道,财经KOL-B,2024-12-08,2025-01-04,2025-01-07,否,香港
+U000071,线上推广,Facebook,2024-07-14,2024-08-10,2024-08-17,是,香港
+U000072,线上推广,抖音,2024-06-28,2024-07-07,2024-07-20,否,香港
+U000073,线上推广,Facebook,2024-12-03,2024-12-09,2024-12-13,否,香港
+U000074,B端机构合作,银行合作,2024-06-28,2024-07-18,2024-07-28,否,台湾
+U000075,KOL渠道,财经KOL-A,2024-02-29,2024-03-28,2024-03-30,否,台湾
+U000076,KOL渠道,财经KOL-A,2024-02-25,2024-03-15,2024-03-26,否,香港
+U000077,线下地推,地推团队-华东,2024-09-18,2024-09-21,2024-09-30,否,香港
+U000078,KOL渠道,财经KOL-A,2024-12-28,2025-01-10,2025-01-24,是,台湾
+U000079,老客转介绍,自然裂变,2024-07-05,2024-07-18,2024-07-28,是,香港
+U000080,实体店,铜锣湾店,2024-12-05,2025-01-01,2025-01-15,否,香港
+U000081,实体店,铜锣湾店,2024-12-07,2024-12-20,2024-12-31,否,香港
+U000082,实体店,旺角店,2024-04-08,2024-04-21,2024-04-27,否,新加坡
+U000083,老客转介绍,自然裂变,2024-11-11,2024-11-29,2024-12-07,否,香港
+U000084,KOL渠道,财经KOL-B,2024-04-17,2024-04-30,2024-05-09,否,新加坡
+U000085,KOL渠道,财经KOL-B,2024-08-14,2024-08-28,2024-09-05,否,大陆
+U000086,B端机构合作,券商合作,2024-12-03,2024-12-05,2024-12-15,否,新加坡
+U000087,实体店,铜锣湾店,2024-02-17,2024-03-14,2024-03-17,否,新加坡
+U000088,KOL渠道,财经KOL-A,2024-04-11,2024-04-15,2024-04-18,是,大陆
+U000089,实体店,旺角店,2024-08-21,2024-09-03,2024-09-12,否,香港
+U000090,老客转介绍,推荐官活动,2024-09-10,2024-09-22,2024-10-02,否,新加坡
+U000091,自然流量,搜索引擎,2025-02-02,2025-02-15,2025-02-27,否,新加坡
+U000092,实体店,铜锣湾店,2024-01-26,2024-02-12,2024-02-25,否,香港
+U000093,线下地推,地推团队-华南,2024-08-25,2024-09-15,2024-09-23,否,台湾
+U000094,KOL渠道,财经KOL-B,2024-11-09,2024-12-05,2024-12-13,否,大陆
+U000095,B端机构合作,银行合作,2024-03-22,2024-04-14,2024-04-21,否,香港
+U000096,B端机构合作,券商合作,2024-11-22,2024-11-30,2024-12-08,否,大陆
+U000097,老客转介绍,自然裂变,2024-05-20,2024-06-03,2024-06-07,是,香港
+U000098,KOL渠道,财经KOL-B,2024-06-12,2024-07-10,2024-07-12,否,香港
+U000099,线上推广,抖音,2024-12-21,2024-12-25,2024-12-26,否,大陆
+U000100,线下地推,地推团队-华北,2024-10-04,2024-10-18,2024-10-21,否,大陆
+U000101,线下地推,地推团队-华东,2024-12-22,2024-12-22,2025-01-03,否,台湾
+U000102,线下地推,地推团队-华北,2024-01-04,2024-02-03,2024-02-15,否,大陆
+U000103,B端机构合作,银行合作,2024-10-02,2024-10-25,2024-11-06,否,台湾
+U000104,线上推广,抖音,2024-04-22,2024-04-30,2024-04-30,否,大陆
+U000105,KOL渠道,生活KOL-C,2024-12-13,2025-01-07,2025-01-09,否,大陆
+U000106,线上推广,Facebook,2024-07-20,2024-08-07,2024-08-07,否,香港
+U000107,老客转介绍,推荐官活动,2024-03-10,2024-04-06,2024-04-06,否,香港
+U000108,线下地推,地推团队-华北,2024-04-18,2024-05-02,2024-05-14,否,大陆
+U000109,KOL渠道,财经KOL-B,2024-05-09,2024-06-04,2024-06-04,否,新加坡
+U000110,实体店,旺角店,2024-06-28,2024-07-05,2024-07-17,否,新加坡
+U000111,自然流量,搜索引擎,2024-05-06,2024-05-12,2024-05-21,否,香港
+U000112,线上推广,Google,2024-08-30,2024-09-20,2024-09-23,否,大陆
+U000113,老客转介绍,推荐官活动,2025-01-27,2025-02-07,2025-02-16,否,新加坡
+U000114,老客转介绍,自然裂变,2025-02-02,2025-02-28,2025-03-04,否,香港
+U000115,实体店,旺角店,2024-06-08,2024-06-26,2024-07-02,否,大陆
+U000116,老客转介绍,自然裂变,2024-02-08,2024-02-26,2024-03-07,否,香港
+U000117,自然流量,品牌词,2025-01-30,2025-02-08,2025-02-17,否,香港
+U000118,B端机构合作,券商合作,2024-06-26,2024-07-13,2024-07-18,否,香港
+U000119,实体店,尖沙咀店,2024-06-23,2024-06-23,2024-07-06,否,大陆
+U000120,自然流量,App Store,2024-07-04,2024-07-24,2024-07-31,否,新加坡
+U000121,线上推广,抖音,2024-03-31,2024-04-23,2024-05-03,否,香港
+U000122,实体店,尖沙咀店,2025-01-31,2025-02-15,2025-02-28,否,新加坡
+U000123,实体店,铜锣湾店,2024-06-14,2024-07-11,2024-07-25,否,香港
+U000124,KOL渠道,财经KOL-B,2024-05-04,2024-05-28,2024-06-06,否,新加坡
+U000125,线下地推,地推团队-华北,2024-01-15,2024-01-30,2024-02-01,否,大陆
+U000126,线上推广,Instagram,2024-05-12,2024-05-22,2024-05-31,否,新加坡
+U000127,KOL渠道,生活KOL-C,2024-01-06,2024-01-22,2024-01-23,否,香港
+U000128,老客转介绍,推荐官活动,2024-09-07,2024-09-24,2024-10-05,否,大陆
+U000129,老客转介绍,推荐官活动,2024-08-17,2024-09-11,2024-09-15,是,香港
+U000130,线下地推,地推团队-华东,2024-05-04,2024-05-13,2024-05-18,否,大陆
+U000131,实体店,尖沙咀店,2024-06-25,2024-07-08,2024-07-16,否,香港
+U000132,KOL渠道,生活KOL-C,2024-08-20,2024-08-28,2024-08-31,否,香港
+U000133,老客转介绍,自然裂变,2024-06-10,2024-06-13,2024-06-25,否,新加坡
+U000134,线上推广,Google,2024-04-20,2024-05-13,2024-05-24,否,台湾
+U000135,B端机构合作,银行合作,2024-02-21,2024-03-18,2024-03-21,否,香港
+U000136,线上推广,Instagram,2024-01-08,2024-01-30,2024-02-03,否,香港
+U000137,自然流量,品牌词,2024-05-29,2024-06-20,2024-06-30,否,大陆
+U000138,自然流量,搜索引擎,2024-10-20,2024-10-29,2024-11-05,否,香港
+U000139,线上推广,Facebook,2024-05-09,2024-06-08,2024-06-09,否,香港
+U000140,线下地推,地推团队-华北,2024-02-07,2024-02-25,2024-02-25,否,香港
+U000141,线上推广,Instagram,2024-02-13,2024-02-20,2024-03-03,否,大陆
+U000142,实体店,尖沙咀店,2024-11-12,2024-11-19,2024-11-25,否,大陆
+U000143,线下地推,地推团队-华北,2024-10-28,2024-11-10,2024-11-19,否,香港
+U000144,实体店,尖沙咀店,2024-02-20,2024-03-21,2024-03-31,否,香港
+U000145,KOL渠道,生活KOL-C,2024-02-11,2024-02-16,2024-02-24,否,香港
+U000146,线上推广,Facebook,2024-07-28,2024-08-11,2024-08-18,否,香港
+U000147,自然流量,搜索引擎,2024-05-27,2024-06-18,2024-07-01,否,大陆
+U000148,自然流量,品牌词,2024-04-29,2024-05-28,2024-06-09,否,新加坡
+U000149,实体店,尖沙咀店,2024-04-11,2024-04-24,2024-04-27,否,新加坡
+U000150,线上推广,Instagram,2024-03-13,2024-03-15,2024-03-27,是,香港`
+  },
+  file3: {
+    name: '03_活动预算表.csv',
+    content: `活动名称,活动标识,预算金额_HKD,单人上限_HKD,活动开始日期,活动结束日期,互斥活动,备注
+新客入金奖励2025Q1,NUP_2025Q1,500000,2000,2025-01-01,2025-03-31,,核心获客活动
+新客入金奖励2025Q2,NUP_2025Q2,600000,2000,2025-04-01,2025-06-30,NUP_2025Q1,与Q1互斥-同一用户只能参与一期
+KOL渠道专属奖励,KOL_2025,300000,1500,2025-01-01,2025-06-30,NUP_2025Q1;NUP_2025Q2,与通用新客奖励互斥
+转仓奖励活动,TRANSFER_2025,200000,3000,2025-01-01,2025-06-30,,独立活动不互斥
+裂变推荐官奖励,REFERRAL_2025,400000,5000,2025-01-01,2025-06-30,,按邀请人数阶梯发放
+老客回馈活动,LOYALTY_2025,150000,800,2025-03-01,2025-05-31,,仅限开户满1年的用户
+春节特别活动,CNY_2025,100000,1000,2025-01-20,2025-02-15,,限时活动
+入金满额加码,TOPUP_2025,250000,2500,2025-02-01,2025-06-30,,与其他活动可叠加`
+  }
+};
+
+function triggerDownload(filename, content) {
+  const BOM = '\uFEFF';
+  const blob = new Blob([BOM + content], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+function downloadCSV(key) {
+  if (key === 'all') {
+    ['file1', 'file2', 'file3'].forEach(function(k, i) {
+      setTimeout(function() {
+        triggerDownload(csvData[k].name, csvData[k].content);
+      }, i * 300);
+    });
+    return;
+  }
+  const file = csvData[key];
+  if (file) triggerDownload(file.name, file.content);
+}
+
+// ============================================================
+// Progress bar
+// ============================================================
+window.addEventListener('scroll', function() {
+  var h = document.documentElement;
+  var pct = (h.scrollTop / (h.scrollHeight - h.clientHeight)) * 100;
+  document.getElementById('progress-bar').style.width = pct + '%';
+});
+
+// ============================================================
+// Back to top button
+// ============================================================
+window.addEventListener('scroll', function() {
+  var btn = document.getElementById('back-top');
+  btn.style.display = window.scrollY > 400 ? 'flex' : 'none';
+});
+
+// ============================================================
+// Side nav active highlight
+// ============================================================
+(function() {
+  var ids = ['s1','s2','s2b','s3','s4','s5','s6','s7','s-practice'];
+  var links = document.querySelectorAll('.side-nav a');
+  window.addEventListener('scroll', function() {
+    var scrollPos = window.scrollY + 200;
+    var activeIdx = 0;
+    for (var i = 0; i < ids.length; i++) {
+      var el = document.getElementById(ids[i]);
+      if (el && el.offsetTop <= scrollPos) activeIdx = i;
+    }
+    links.forEach(function(l, i) {
+      l.classList.toggle('active', i === activeIdx);
+    });
+  });
+})();
+
+// ============================================================
+// Accordion: make case h3 headers collapsible
+// ============================================================
+(function() {
+  var caseHeaders = document.querySelectorAll('.phase > h3 > .badge');
+  caseHeaders.forEach(function(badge) {
+    var h3 = badge.parentElement;
+    var phase = h3.parentElement;
+    var siblings = [];
+    var next = h3.nextElementSibling;
+    while (next) { siblings.push(next); next = next.nextElementSibling; }
+    if (siblings.length === 0) return;
+    var wrapper = document.createElement('div');
+    wrapper.className = 'case-body';
+    siblings.forEach(function(s) { wrapper.appendChild(s); });
+    phase.appendChild(wrapper);
+    h3.classList.add('case-toggle');
+    h3.addEventListener('click', function() {
+      h3.classList.toggle('open');
+      wrapper.classList.toggle('open');
+    });
+  });
+})();
+
+// ============================================================
+// Phase color bars
+// ============================================================
+(function() {
+  var sections = {s3: 'phase-pre', s4: 'phase-mid', s5: 'phase-post'};
+  Object.keys(sections).forEach(function(sid) {
+    var sec = document.getElementById(sid);
+    if (!sec) return;
+    sec.querySelectorAll('.phase').forEach(function(p) {
+      p.classList.add(sections[sid]);
+    });
+  });
+})();
+
+// ============================================================
+// Typewriter cursor on AI chat bubbles
+// ============================================================
+(function() {
+  document.querySelectorAll('.chat-avatar.ai').forEach(function(avatar) {
+    var msg = avatar.closest('.chat-msg');
+    if (!msg) return;
+    var bubble = msg.querySelector('.chat-bubble');
+    if (bubble && !bubble.querySelector('.typewriter-cursor')) {
+      var cursor = document.createElement('span');
+      cursor.className = 'typewriter-cursor';
+      bubble.appendChild(cursor);
+    }
+  });
+})();
+
+// ============================================================
+// Data preview panel
+// ============================================================
+function togglePreview() {
+  var panel = document.getElementById('data-preview');
+  if (panel.classList.contains('open')) {
+    panel.classList.remove('open');
+    return;
+  }
+  if (!panel.innerHTML) {
+    var html = '';
+    ['file1','file2','file3'].forEach(function(key) {
+      var f = csvData[key];
+      var lines = f.content.trim().split('\n');
+      var headers = lines[0].split(',');
+      html += '<div style="margin-bottom:16px;"><b style="font-size:0.85em;color:var(--primary);">' + f.name + '</b>';
+      html += '<span style="color:var(--muted);font-size:0.78em;margin-left:8px;">(' + (lines.length-1) + ' rows)</span>';
+      html += '<table class="preview-table"><tr>';
+      headers.forEach(function(h) { html += '<th>' + h + '</th>'; });
+      html += '</tr>';
+      for (var i = 1; i <= Math.min(5, lines.length-1); i++) {
+        var cols = lines[i].split(',');
+        html += '<tr>';
+        cols.forEach(function(c) { html += '<td>' + c + '</td>'; });
+        html += '</tr>';
+      }
+      html += '</table></div>';
+    });
+    panel.innerHTML = html;
+  }
+  panel.classList.add('open');
+}
+</script>
+
+</body>
+</html>
