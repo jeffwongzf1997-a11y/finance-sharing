@@ -219,18 +219,18 @@
     <div style="font-size:3em;margin-bottom:16px;">🔒</div>
     <h2 style="color:#fff;font-size:1.5em;margin-bottom:8px;">内部培训材料</h2>
     <p style="color:#94a3b8;font-size:0.9em;margin-bottom:24px;">请输入访问密码</p>
-    <input id="pwd-input" type="password" placeholder="输入密码后按回车"
+    <input id="pwd-input" type="password" placeholder="请输入密码"
       style="width:100%;padding:12px 16px;border:2px solid #334155;border-radius:10px;background:#1e293b;color:#fff;font-size:1em;outline:none;text-align:center;transition:border-color 0.2s;"
       onfocus="this.style.borderColor='#2563eb'" onblur="this.style.borderColor='#334155'">
+    <button id="pwd-btn" style="width:100%;margin-top:12px;padding:12px;border:none;border-radius:10px;background:#2563eb;color:#fff;font-size:1em;cursor:pointer;transition:background 0.2s;"
+      onmouseover="this.style.background='#1d4ed8'" onmouseout="this.style.background='#2563eb'">确认</button>
     <p id="pwd-err" style="color:#ef4444;font-size:0.85em;margin-top:12px;opacity:0;transition:opacity 0.3s;">密码错误，请重试</p>
     <p style="color:#475569;font-size:0.75em;margin-top:24px;">Futu Internal Use Only</p>
   </div>
 </div>
 <script>
 (function(){
-  var h='a]W0dTIwMjY=';
-  function d(s){return atob(s.split('').reverse().join(''));}
-  var p=d(h);
+  var p='futu2026';
   function check(){
     if(document.getElementById('pwd-input').value===p){
       document.getElementById('pwd-gate').style.opacity='0';
@@ -244,6 +244,7 @@
     }
   }
   document.getElementById('pwd-input').addEventListener('keydown',function(e){if(e.key==='Enter')check();});
+  document.getElementById('pwd-btn').addEventListener('click',check);
   if(sessionStorage.getItem('auth')==='1'){document.getElementById('pwd-gate').style.display='none';}
 })();
 </script>
